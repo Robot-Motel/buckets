@@ -2,10 +2,26 @@ use clap::{Args, Parser, Subcommand};
 
 #[derive(Subcommand)]
 pub enum Command {
+    // Repository commands
     Init(InitCommand),
     Create(CreateCommand),
     Commit(CommitCommand),
+    Revert(RevertCommand),
+    Rollback(RollbackCommand),
+    Stash(StashCommand),
+    // Information commands
     Status(StatusCommand),
+    History(HistoryCommand),
+    List(ListCommand),
+    Stats(StatsCommand),
+    // Expectation commands
+    Expect(ExpectCommand),
+    Check(CheckCommand),
+    Link(LinkCommand),
+    Finalize(FinalizeCommand),
+
+
+
 }
 
 #[derive(Parser)]
@@ -30,14 +46,70 @@ pub struct CreateCommand {
 pub struct CommitCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
+}
 
-    #[clap(short, long, required = false)]
-    pub message: Option<String>,
+#[derive(Args)]
+pub struct RevertCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
 
+#[derive(Args)]
+pub struct RollbackCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct StashCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
 }
 
 #[derive(Args)]
 pub struct StatusCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct HistoryCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct ListCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct StatsCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct ExpectCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct CheckCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct LinkCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct FinalizeCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }

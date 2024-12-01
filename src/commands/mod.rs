@@ -1,4 +1,14 @@
 pub(crate) mod init;
-pub(crate) mod status;
 pub(crate) mod create;
 pub(crate) mod commit;
+pub(crate) mod revert;
+pub(crate) mod rollback;
+pub(crate) mod stash;
+pub(crate) mod status;
+pub(crate) mod history;
+pub(crate) mod list;
+pub(crate) mod stats;
+pub(crate) mod expect;
+pub(crate) mod check;
+pub(crate) mod link;
+pub(crate) mod finalize;

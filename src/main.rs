@@ -45,10 +45,23 @@ fn main() -> ExitCode {
 
 fn dispatch() -> Result<(), BucketError> {
     match &ARGS.command {
+        // Commands that modify the repository
         Command::Init(command) => commands::init::execute(command)?,
-        Command::Status(command) => commands::status::execute(command)?,
         Command::Create(command) => commands::create::execute(command)?,
         Command::Commit(command) => commands::commit::execute(command)?,
+        Command::Revert(command) => commands::revert::execute(command)?,
+        Command::Rollback(command) => commands::rollback::execute(command)?,
+        Command::Stash(command) => commands::stash::execute(command)?,
+        // Informational commands
+        Command::Status(command) => commands::status::execute(command)?,
+        Command::History(command) => commands::history::execute(command)?,
+        Command::List(command) => commands::list::execute(command)?,
+        Command::Stats(command) => commands::stats::execute(command)?,
+        // Expectation commands
+        Command::Expect(command) => commands::expect::execute(command)?,
+        Command::Check(command) => commands::check::execute(command)?,
+        Command::Link(command) => commands::link::execute(command)?,
+        Command::Finalize(command) => commands::finalize::execute(command)?,
     }
 
     Ok(())
