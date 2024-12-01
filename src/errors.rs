@@ -6,7 +6,7 @@ pub enum BucketError {
     // DuckDB(duckdb::Error),
     // #[allow(dead_code)]
     // BucketAlreadyExists,
-    // RepoAlreadyExists(String),
+    RepoAlreadyExists(String),
     // #[allow(dead_code)]
     // NotInBucketRepo,
     // #[allow(dead_code)]
@@ -16,6 +16,20 @@ pub enum BucketError {
 
 impl BucketError {
     pub(crate) fn message(&self) -> String {
-        todo!()
+        match self {
+            BucketError::IoError(e) => format!("IO Error: {}", e),
+            // BucketError::DuckDB(e) => format!("Database Error: {}", e),
+            // BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
+            BucketError::RepoAlreadyExists(message) => format!("Repository {} already exists", message),
+            // BucketError::NotInBucketRepo => "Not in a bucket repository".to_string(),
+            // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
+            // BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
+        }
+    }
+}
+
+impl From<io::Error> for BucketError {
+    fn from(error: io::Error) -> Self {
+        BucketError::IoError(error)
     }
 }
