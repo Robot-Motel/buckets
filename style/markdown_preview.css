@@ -1,0 +1,18 @@
+/* Ensure the preview container is styled properly */
+body, html {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Open Sans', sans-serif;
+    width: 80%;
+    display: flex;
+    justify-content: center; /* Center the content horizontally */
+}
+
+/* Explicitly enforce box-sizing */
+*,
+*::before,
+*::after {
+    box-sizing: inherit;
+}
+
