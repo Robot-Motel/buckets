@@ -25,9 +25,9 @@ jobs:
       - name: Install latest nightly
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
-          components: rustfmt, clippy, rustup
+          components: rustfmt, clippy
       - uses: actions-rs/cargo@v1
         with:
           command: build
