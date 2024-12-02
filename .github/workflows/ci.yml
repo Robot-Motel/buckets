@@ -22,12 +22,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install latest nightly
+      - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-          components: rustfmt, clippy
+          components: rustfmt, clippy, rustup
       - uses: actions-rs/cargo@v1
         with:
           command: build
