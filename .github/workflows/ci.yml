@@ -22,5 +22,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Build and Test
-        run: 'C:\Users\cyber\.cargo\bin\cargo' test --release
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
