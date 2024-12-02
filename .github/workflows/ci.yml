@@ -27,7 +27,7 @@ jobs:
         with:
           toolchain: stable
           override: true
-          components: rustfmt, clippy, rustup
+          components: rustfmt, clippy
       - uses: actions-rs/cargo@v1
         with:
           command: build
