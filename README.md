@@ -1,3 +1,6 @@
+[![Rust](https://github.com/3vilM33pl3/buckets/actions/workflows/ci.yml/badge.svg)](https://github.com/3vilM33pl3/buckets/actions/workflows/ci.yml)
+
+
 ### Overview
 Buckets is a tool for game asset and expectation management. It controls the version of work a user creates and
 sets and records expectations they have of each others work to improve collaboration. Every stage of the workflow is 
