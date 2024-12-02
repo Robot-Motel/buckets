@@ -25,6 +25,6 @@ Every bucket has the following layout:
 ```
 `.b` At the top of the bucket, contains bucket info and storage
 
-`.b\config` Bucket configuration file. See [Bucket Configuration](repository_configuration)
+`.b\config` Bucket configuration file. See [Bucket Configuration](repository_configuration.md)
 
-`.b\storage\` Object storage for commited assets. See [Bucket object storage](object_storage_and_hashing)
+`.b\storage\` Object storage for commited assets. See [Bucket object storage](object_storage_and_hashing.md)
