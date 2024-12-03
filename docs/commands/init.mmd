@@ -1,0 +1,17 @@
+flowchart TD
+    subgraph main
+        A[Init command] --> B{Does directory \n exists}
+        B --> |Yes| C{Check if already \n in buckets repo}
+        C --> |Yes| Z[Error: Repository already exists]
+        C --> |No| Y[Directory already exists]
+    end
+
+    subgraph init
+        B --> |No| D[Create directories: \n repo_name/.bucket]
+        D --> E[Create config file]
+        E --> F[Create database]
+    end
+
+    Z --> G((End))
+    Y --> G((End))
+    F --> G((End))

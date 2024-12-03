@@ -1,0 +1,34 @@
+flowchart TD
+    subgraph main
+        A[Commit command] --> Z{Check if valid \n buckets repository}
+        Z --> |Yes| B[Read repository config file]
+        B --> C[Find top level bucket directory]
+        C --> D{Check if valid \n bucket directory}
+        D -->|Yes| E[Read bucket config from file]
+        D -->|No| G[Error: Not a valid bucket directory]
+    end
+
+    subgraph BucketCommand
+        E --> H
+        H[Generate meta data list: blake3 hash and filename] --> I{Any files in list?}
+        I -->|Yes| J[Load previous commit meta data]
+        J --> K{Files in \n previous commit?}
+        K -->|Yes| L[Compare commits]
+        K -->|No| M[Insert commit into database]
+        L --> N{Changes?}
+        N -->|Yes| M
+
+
+
+        subgraph Loop[all files in commit]
+            Q[Insert file meta data into database] --> R[Compress and store file]
+        end
+
+        M --> Loop
+    end
+    Z -->|No| P((End))
+    R -->|No| P((End))
+    I -->|No| P((End))
+    G -->|No| P((End))
+    N -->|No| P((End))
+    D --> P((End))
