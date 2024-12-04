@@ -1,7 +1,12 @@
+%%{init: {'themeVariables': {'subgraphTitleTextAlign': 'left'}}}%%
 flowchart TD
-    subgraph main
+    subgraph check repo
         A[Commit command] --> Z{Check if valid \n buckets repository}
         Z --> |Yes| B[Read repository config file]
+        Z --> |No| X[Error: Not a valid buckets repository]
+        end
+
+        subgraph bucket check
         B --> C[Find top level bucket directory]
         C --> D{Check if valid \n bucket directory}
         D -->|Yes| E[Read bucket config from file]
@@ -26,6 +31,7 @@ flowchart TD
 
         M --> Loop
     end
+    X -->|No| P((End))
     Z -->|No| P((End))
     R -->|No| P((End))
     I -->|No| P((End))

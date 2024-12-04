@@ -3,7 +3,7 @@ flowchart TD
         A[Init command] --> B{Does directory \n exists}
         B --> |Yes| C{Check if already \n in buckets repo}
         C --> |Yes| Z[Error: Repository already exists]
-        C --> |No| Y[Directory already exists]
+        C --> |No| Y[Error: Directory already exists]
     end
 
     subgraph init
