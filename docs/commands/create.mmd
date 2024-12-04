@@ -1,0 +1,20 @@
+flowchart TD
+    A[Create command] --> B{Check if in valid\nbuckets repo}
+    B -->|Yes| C{Check if bucket \ndirectory exists}
+    B -->|No| E3[Error: Not a valid buckets repository]
+    C --> |No| D[Create bucket \n directories<br>bucket name/.b]
+    C --> |Yes| W{Check if \n valid bucket}
+    W --> |Yes| E1[Error: Bucket already exists]
+    W --> |No| E2[Error: directory already exists]
+    D --> L[SQL: Insert bucket info]
+    L --> G[Retrieve UUID of bucket]
+    G --> H[Create bucket info file]
+    H --> I[Write UUID to .b/info]
+    I --> Y((End))
+    E3 --> Y((End))
+    E1 --> Y((End))
+    E2 --> Y((End))
+
+    style E1 fill:#f57474
+    style E2 fill:#f57474
+    style E3 fill:#f57474
