@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use log::debug;
 
 /// Searches for a directory with the given name in the parent directories.
 ///
@@ -30,14 +31,63 @@ pub fn find_directory_in_parents(start_path: &Path, target_dir_name: &str) -> Op
     None
 }
 
+/// Checks if the given directory is a valid bucket repository.
+/// It verifies the presence of a `.buckets` directory and a valid `buckets.db` DuckDB database file.
 pub fn is_valid_bucket_repo(dir_path: &Path) -> bool {
+
+    debug!("{:?}", dir_path);
+    // Find the .buckets directory
     let buckets_repo_path = find_directory_in_parents(dir_path, ".buckets");
-    println!("{:?}", buckets_repo_path);
+    debug!("{:?}", buckets_repo_path);
+
     match buckets_repo_path {
-        Some(path) => is_valid_repo_config(&path),
+        Some(path) => {
+            // Check for a valid repository configuration
+            if !is_valid_repo_config(&path) {
+                debug!("config file is missing");
+                return false;
+            }
+
+            // Check if `buckets.db` exists
+            let db_path = path.join("buckets.db");
+            if !db_path.is_file() {
+                debug!("buckets.db file is missing");
+                return false;
+            }
+
+            // Validate the `buckets.db` file as a DuckDB database
+            if !is_valid_duckdb_database(&db_path) {
+                debug!("buckets.db is not a valid DuckDB database");
+                return false;
+            }
+
+            true
+        }
         None => false,
     }
 }
+
+/// Validates if the given file is a DuckDB database.
+fn is_valid_duckdb_database(db_path: &Path) -> bool {
+    // Try opening the database using the DuckDB driver
+    match duckdb::Connection::open(db_path) {
+        Ok(conn) => {
+            // Check for a simple query to validate the database
+            match conn.execute("SELECT 1;", []) {
+                Ok(_) => true,
+                Err(e) => {
+                    debug!("Error querying DuckDB: {}", e);
+                    false
+                }
+            }
+        }
+        Err(e) => {
+            debug!("Error opening DuckDB database: {}", e);
+            false
+        }
+    }
+}
+
 
 #[allow(dead_code)]
 pub fn is_valid_bucket(bucket_path: &Path) -> bool {
@@ -171,14 +221,55 @@ mod tests {
     }
 
     #[test]
-    fn test_valid_bucket_repo() {
+    fn test_is_valid_bucket_repo_empty_repo_dir() {
+        // Create a temporary directory to simulate a bucket repository
+        let temp_dir = tempdir().unwrap();
+
+        // Case 1: No `.buckets` directory
+        assert!(!is_valid_bucket_repo(temp_dir.path()));
+
+    }
+
+    #[test]
+    fn test_is_valid_bucket_repo_empty_buckets_dir() {
+        // Create a temporary directory to simulate a bucket repository
         let temp_dir = tempdir().unwrap();
         let buckets_dir = temp_dir.path().join(".buckets");
-        fs::create_dir(&buckets_dir).unwrap();
-        let config_file = buckets_dir.join("config");
-        File::create(&config_file).unwrap();
+
+        fs::create_dir_all(&buckets_dir).unwrap();
+        assert!(!is_valid_bucket_repo(temp_dir.path()));
+
+    }
+
+    #[test]
+    fn test_is_valid_bucket_repo_no_db() {
+        // Create a temporary directory to simulate a bucket repository
+        let temp_dir = tempdir().unwrap();
+        let buckets_dir = temp_dir.path().join(".buckets");
+        let config_path = buckets_dir.join("config");
+
+        fs::create_dir_all(&buckets_dir).unwrap();
+        fs::File::create(&config_path).unwrap();
+        assert!(!is_valid_bucket_repo(temp_dir.path()));
+
+    }
+
+    #[test]
+    fn test_is_valid_bucket_repo_with_valid_repo() {
+        // Create a temporary directory to simulate a bucket repository
+        let temp_dir = tempdir().unwrap();
+        let buckets_dir = temp_dir.path().join(".buckets");
+        let db_path = buckets_dir.join("buckets.db");
+        let config_path = buckets_dir.join("config");
+
+        fs::create_dir_all(&buckets_dir).unwrap();
+        fs::File::create(&config_path).unwrap();
+        let conn = duckdb::Connection::open(&db_path).unwrap();
+        conn.execute("CREATE TABLE test (id INTEGER);", []).unwrap(); // Create a valid table
+        conn.close().unwrap();
 
         assert!(is_valid_bucket_repo(temp_dir.path()));
+
     }
 
     #[test]

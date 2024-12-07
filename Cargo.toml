@@ -7,6 +7,8 @@ edition = "2021"
 clap = { version = "4.5.20", features = ["derive"] }
 once_cell = "1.20.2"
 log = "0.4.22"
-duckdb = "1.1.1"
+duckdb = { version = "1.1.1", features = ["bundled"] }
 tempfile = "3.13.0"
 assert_cmd = "2.0.16"
+toml = "0.8.19"
+serde = { version = "1.0.210", features = ["derive"] }

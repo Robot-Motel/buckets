@@ -33,3 +33,11 @@ impl From<io::Error> for BucketError {
         BucketError::IoError(error)
     }
 }
+
+impl From<duckdb::Error> for BucketError {
+    fn from(error: duckdb::Error) -> Self {
+        // BucketError::DuckDB(error)
+        BucketError::IoError(io::Error::new(io::ErrorKind::Other, error.to_string()))
+    }
+
+}

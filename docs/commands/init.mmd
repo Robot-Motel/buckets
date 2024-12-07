@@ -1,9 +1,11 @@
 flowchart TD
-    subgraph main
+    subgraph checks
         A[Init command] --> B{Does directory \n exists}
         B --> |Yes| C{Check if already \n in buckets repo}
         C --> |Yes| E1[Error: Repository already exists]
-        C --> |No| E2[Error: Directory already exists]
+        C --> |No| Y{File or directory}
+        Y --> |Dir| E2[Error: Directory already exists]
+        Y --> |File| E3[Error: File already exists]
     end
 
     subgraph init
@@ -14,7 +16,9 @@ flowchart TD
 
     E1 --> G((End))
     E2 --> G((End))
+    E3 --> G((End))
     F --> G((End))
 
     style E1 fill:#f57474
     style E2 fill:#f57474
+    style E3 fill:#f57474
