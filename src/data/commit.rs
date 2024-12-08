@@ -79,6 +79,7 @@ impl PartialEq for CommitStatus {
 }
 
 impl Commit {
+    #[allow(dead_code)]
     pub fn compare(&self, other_commit: &Commit) -> Option<Vec<CommittedFile>> {
         match other_commit {
             Commit {

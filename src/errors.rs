@@ -19,7 +19,7 @@ impl BucketError {
             BucketError::DuckDB(e) => format!("Database Error: {}", e),
             BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
             BucketError::RepoAlreadyExists(message) => format!("Repository {} already exists", message),
-            BucketError::NotInBucketsRepo => "Not in a bucket repository".to_string(),
+            BucketError::NotInBucketsRepo => "Not in a buckets repository".to_string(),
             // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
             BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
         }
@@ -33,7 +33,7 @@ impl Display for BucketError {
             BucketError::DuckDB(e) => write!(f, "Database Error: {}", e),
             BucketError::BucketAlreadyExists => write!(f, "Bucket already exists"),
             BucketError::RepoAlreadyExists(message) => write!(f, "Repository already exists {}", message),
-            BucketError::NotInBucketsRepo => write!(f, "Not in a bucket repository"),
+            BucketError::NotInBucketsRepo => write!(f, "Not in a buckets repository"),
             // BucketError::InBucketRepo => write!(f, "Already in a bucket repository"),
             BucketError::NotAValidBucket => write!(f, "Not a valid bucket"),
         }
