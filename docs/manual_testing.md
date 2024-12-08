@@ -17,7 +17,7 @@ winget install DuckDB.cli # Install command line DuckDB
 ### Steps
 
 ```bash
-bucket init test_repo
+buckets init test_repo
 ```
 
 ### Expected results
@@ -52,6 +52,26 @@ D describe buckets;
 │ id          │ UUID        │ NO      │ PRI     │         │         │
 │ name        │ VARCHAR     │ NO      │         │         │         │
 │ path        │ VARCHAR     │ NO      │         │         │         │
+└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
+D describe commits;
+┌─────────────┬─────────────┬─────────┬─────────┬───────────────────┬─────────┐
+│ column_name │ column_type │  null   │   key   │      default      │  extra  │
+│   varchar   │   varchar   │ varchar │ varchar │      varchar      │ varchar │
+├─────────────┼─────────────┼─────────┼─────────┼───────────────────┼─────────┤
+│ id          │ UUID        │ NO      │ PRI     │                   │         │
+│ bucket_id   │ UUID        │ NO      │         │                   │         │
+│ message     │ VARCHAR     │ NO      │         │                   │         │
+│ created_at  │ TIMESTAMP   │ NO      │         │ CURRENT_TIMESTAMP │         │
+└─────────────┴─────────────┴─────────┴─────────┴───────────────────┴─────────┘
+D describe files
+┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
+│ column_name │ column_type │  null   │   key   │ default │  extra  │
+│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
+├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
+│ id          │ UUID        │ NO      │ PRI     │         │         │
+│ commit_id   │ UUID        │ NO      │ UNI     │         │         │
+│ file_path   │ VARCHAR     │ NO      │ UNI     │         │         │
+│ hash        │ VARCHAR     │ NO      │ UNI     │         │         │
 └─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
 D select * from buckets;
 ┌──────┬─────────┬─────────┐
