@@ -1,29 +1,41 @@
+use std::fmt::{Display, Formatter};
 use std::io;
 
 pub enum BucketError {
-    #[allow(dead_code)]
     IoError(io::Error),
-    // DuckDB(duckdb::Error),
-    // #[allow(dead_code)]
-    // BucketAlreadyExists,
+    DuckDB(duckdb::Error),
+    BucketAlreadyExists,
     RepoAlreadyExists(String),
-    // #[allow(dead_code)]
-    // NotInBucketRepo,
+    NotInBucketsRepo,
     // #[allow(dead_code)]
     // InBucketRepo,
-    // NotAValidBucket,
+    NotAValidBucket,
 }
 
 impl BucketError {
     pub(crate) fn message(&self) -> String {
         match self {
             BucketError::IoError(e) => format!("IO Error: {}", e),
-            // BucketError::DuckDB(e) => format!("Database Error: {}", e),
-            // BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
+            BucketError::DuckDB(e) => format!("Database Error: {}", e),
+            BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
             BucketError::RepoAlreadyExists(message) => format!("Repository {} already exists", message),
-            // BucketError::NotInBucketRepo => "Not in a bucket repository".to_string(),
+            BucketError::NotInBucketsRepo => "Not in a bucket repository".to_string(),
             // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
-            // BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
+            BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
+        }
+    }
+}
+
+impl Display for BucketError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BucketError::IoError(e) => write!(f, "IO Error: {}", e),
+            BucketError::DuckDB(e) => write!(f, "Database Error: {}", e),
+            BucketError::BucketAlreadyExists => write!(f, "Bucket already exists"),
+            BucketError::RepoAlreadyExists(message) => write!(f, "Repository already exists {}", message),
+            BucketError::NotInBucketsRepo => write!(f, "Not in a bucket repository"),
+            // BucketError::InBucketRepo => write!(f, "Already in a bucket repository"),
+            BucketError::NotAValidBucket => write!(f, "Not a valid bucket"),
         }
     }
 }

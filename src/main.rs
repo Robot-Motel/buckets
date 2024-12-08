@@ -12,6 +12,7 @@ mod commands;
 mod errors;
 mod utils;
 mod config;
+mod data;
 
 static ARGS: Lazy<CliArguments> = Lazy::new(|| {
     CliArguments::try_parse().unwrap_or_else(|error| {

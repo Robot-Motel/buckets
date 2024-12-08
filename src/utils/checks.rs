@@ -21,9 +21,9 @@ pub fn find_directory_in_parents(start_path: &Path, target_dir_name: &str) -> Op
     }
 
     while let Some(parent) = current_path.parent() {
-        let potential_target = parent.join(target_dir_name);
-        if potential_target.is_dir() && fs::metadata(&potential_target).is_ok() {
-            return Some(potential_target);
+        let potential_target2 = parent.join(target_dir_name);
+        if potential_target2.is_dir() && fs::metadata(&potential_target2).is_ok() {
+            return Some(potential_target2);
         }
         current_path = parent;
     }
