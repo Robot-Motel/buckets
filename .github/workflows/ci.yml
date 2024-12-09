@@ -47,4 +47,14 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-
+      - name: Install Tarpaulin
+        run: cargo install cargo-tarpaulin
+      - name: Run Tests with Coverage
+        run: |
+         cargo tarpaulin --out Html 
+         mv tarpaulin-report.html coverage.html
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+         name: coverage-report
+         path: coverage.html
