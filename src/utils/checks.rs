@@ -88,8 +88,6 @@ fn is_valid_duckdb_database(db_path: &Path) -> bool {
     }
 }
 
-
-#[allow(dead_code)]
 pub fn is_valid_bucket(bucket_path: &Path) -> bool {
     let buckets_path = find_directory_in_parents(bucket_path, ".b");
     match buckets_path {
@@ -98,7 +96,6 @@ pub fn is_valid_bucket(bucket_path: &Path) -> bool {
     }
 }
 
-#[allow(dead_code)]
 fn has_valid_bucket_info(bucket_path: &PathBuf) -> bool {
     let info_path = bucket_path.join(".b").join("info");
     if info_path.exists() && info_path.is_file() {
@@ -107,11 +104,7 @@ fn has_valid_bucket_info(bucket_path: &PathBuf) -> bool {
     false
 }
 
-#[allow(dead_code)]
-pub fn db_location(dir_path: &Path) -> PathBuf {
-    let buckets_repo_path = find_directory_in_parents(dir_path, ".buckets").unwrap();
-    buckets_repo_path.join("buckets.db")
-}
+
 
 
 pub fn is_valid_repo_config(dir_path: &Path) -> bool {
@@ -131,23 +124,6 @@ pub fn is_valid_bucket_info(dir_path: &Path) -> bool {
     false
 }
 
-/// Searches for a bucket repository directory in the parent directories.
-///
-/// # Arguments
-///
-/// * `dir_path` - The path to start the search from.
-///
-/// # Returns
-///
-/// Returns `Some(PathBuf)` containing the path to the found bucket repository directory or `None` if not found.
-///
-#[allow(dead_code)]
-pub fn find_bucket_repo(dir_path: &Path) -> Option<PathBuf> {
-    match find_directory_in_parents(dir_path, ".buckets") {
-        Some(path) => Some(path),
-        None => None,
-    }
-}
 
 
 

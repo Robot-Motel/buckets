@@ -1,8 +1,9 @@
-use std::{fs, io};
+use std::{env, fs, io};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use blake3::{Hash, Hasher};
+use duckdb::Connection;
 use walkdir::{DirEntry, WalkDir};
 use crate::errors::BucketError;
 
@@ -48,6 +49,54 @@ pub(crate) fn hash_file<P: AsRef<Path>>(path: P) -> io::Result<Hash> {
     }
 
     Ok(hasher.finalize())
+}
+
+pub fn find_directory_in_parents(start_path: &Path, target_dir_name: &str) -> Option<PathBuf> {
+    let mut current_path = start_path;
+
+    let potential_target = current_path.join(target_dir_name);
+    if potential_target.is_dir() && fs::metadata(&potential_target).is_ok() {
+        return Some(potential_target);
+    }
+
+    while let Some(parent) = current_path.parent() {
+        let potential_target = parent.join(target_dir_name);
+        if potential_target.is_dir() && fs::metadata(&potential_target).is_ok() {
+            return Some(potential_target);
+        }
+        current_path = parent;
+    }
+
+    None
+}
+
+pub fn find_bucket_repo(dir_path: &Path) -> Option<PathBuf> {
+    match find_directory_in_parents(dir_path, ".buckets") {
+        Some(path) => Some(path),
+        None => None,
+    }
+}
+
+pub fn connect_to_db() -> Result<Connection, BucketError> {
+    let path = match find_directory_in_parents(env::current_dir()?.as_path(), ".buckets") {
+        Some(path) => path,
+        None => return Err(BucketError::NotInBucketsRepo),
+    };
+
+    let db_location = db_location(path.as_path());
+    match Connection::open(db_location) {
+        Ok(conn) => {
+            return Ok(conn);
+        },
+        Err(e) => {
+            return Err(BucketError::DuckDB(e));
+        },
+    }
+}
+
+pub fn db_location(dir_path: &Path) -> PathBuf {
+    let buckets_repo_path = find_directory_in_parents(dir_path, ".buckets").unwrap();
+    buckets_repo_path.join("buckets.db")
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use crate::utils::checks::{find_bucket_repo, find_directory_in_parents, is_valid_bucket_info};
+use crate::utils::checks::{find_directory_in_parents, is_valid_bucket_info};
 use log::debug;
 use std::fs::File;
 use std::{env, io};
@@ -11,8 +11,7 @@ use toml::to_string;
 use uuid::Uuid;
 use crate::data::commit::{Commit, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::utils::checks;
-use crate::utils::utils::{find_files_excluding_top_level_b, hash_file};
+use crate::utils::utils::{db_location, find_bucket_repo, find_files_excluding_top_level_b, hash_file};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Bucket {
@@ -188,7 +187,7 @@ fn connect_to_db() -> Result<Connection, BucketError> {
         None => return Err(BucketError::NotInBucketsRepo),
     };
 
-    let db_location = checks::db_location(path.as_path());
+    let db_location = db_location(path.as_path());
     match Connection::open(db_location) {
         Ok(conn) => {
             return Ok(conn);

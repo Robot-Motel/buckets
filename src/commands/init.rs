@@ -34,7 +34,7 @@ fn create_repo(repo_name: &str, repo_location: &Path) -> Result<(), BucketError>
     Ok(())
 }
 
-fn create_config_file(location: &Path) -> Result<(), BucketError> {
+pub fn create_config_file(location: &Path) -> Result<(), BucketError> {
     // Define the default configuration
     let config = Config {
         ntp_server: "pool.ntp.org".to_string(),

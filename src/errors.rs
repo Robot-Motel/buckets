@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::io;
 
 pub enum BucketError {
@@ -36,6 +36,20 @@ impl Display for BucketError {
             BucketError::NotInBucketsRepo => write!(f, "Not in a buckets repository"),
             // BucketError::InBucketRepo => write!(f, "Already in a bucket repository"),
             BucketError::NotAValidBucket => write!(f, "Not a valid bucket"),
+        }
+    }
+}
+
+impl Debug for BucketError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BucketError::IoError(e) => f.debug_tuple("IoError").field(e).finish(),
+            BucketError::DuckDB(e) => f.debug_tuple("DuckDB").field(e).finish(),
+            BucketError::BucketAlreadyExists => f.debug_tuple("BucketAlreadyExists").finish(),
+            BucketError::NotInBucketsRepo => f.debug_tuple("NotInBucketRepo").finish(),
+            // BucketError::InBucketRepo => f.debug_tuple("InBucketRepo").finish(),
+            BucketError::NotAValidBucket => f.debug_tuple("NotAValidBucket").finish(),
+            BucketError::RepoAlreadyExists(message) => f.debug_tuple("RepoAlreadyExists").field(message).finish(),
         }
     }
 }

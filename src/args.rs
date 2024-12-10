@@ -46,6 +46,9 @@ pub struct CreateCommand {
 pub struct CommitCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
+
+    #[clap(required = true)]
+    pub message: String,
 }
 
 #[derive(Args)]
