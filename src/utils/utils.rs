@@ -78,13 +78,14 @@ pub fn find_bucket_repo(dir_path: &Path) -> Option<PathBuf> {
 }
 
 pub fn connect_to_db() -> Result<Connection, BucketError> {
-    let path = match find_directory_in_parents(env::current_dir()?.as_path(), ".buckets") {
-        Some(path) => path,
+    let current_dir = env::current_dir()?;
+
+    let path = match find_directory_in_parents(&current_dir, ".buckets") {
+        Some(path) => path.join("buckets.db"),
         None => return Err(BucketError::NotInBucketsRepo),
     };
 
-    let db_location = db_location(path.as_path());
-    match Connection::open(db_location) {
+    match Connection::open(path.as_path()) {
         Ok(conn) => {
             return Ok(conn);
         },
@@ -92,11 +93,6 @@ pub fn connect_to_db() -> Result<Connection, BucketError> {
             return Err(BucketError::DuckDB(e));
         },
     }
-}
-
-pub fn db_location(dir_path: &Path) -> PathBuf {
-    let buckets_repo_path = find_directory_in_parents(dir_path, ".buckets").unwrap();
-    buckets_repo_path.join("buckets.db")
 }
 
 #[cfg(test)]
@@ -176,4 +172,117 @@ mod tests {
         let result = make_relative_path(path_outside_base, base);
         assert_eq!(result, None);
     }
+
+    #[test]
+    fn test_find_files_excluding_top_level_b() {
+        let temp_dir = tempdir().unwrap();
+        let dir_path = temp_dir.path();
+
+        // Create files and directories
+        fs::create_dir_all(dir_path.join(".b").join("subdir")).unwrap();
+        fs::create_dir_all(dir_path.join("subdir")).unwrap();
+        fs::write(dir_path.join("file1.txt"), b"file1").unwrap();
+        fs::write(dir_path.join(".b").join("file2.txt"), b"file2").unwrap();
+        fs::write(dir_path.join("subdir").join("file3.txt"), b"file3").unwrap();
+
+        // Collect relative paths of all files, excluding `.b` directory
+        let files = find_files_excluding_top_level_b(dir_path);
+
+        assert_eq!(files.len(), 2);
+        assert!(files.contains(&PathBuf::from("file1.txt")));
+        assert!(files.contains(&PathBuf::from("subdir/file3.txt")));
+    }
+
+
+    #[test]
+    fn test_hash_file() {
+        let temp_dir = tempdir().unwrap();
+        let file_path = temp_dir.path().join("test_file.txt");
+
+        // Write some content to the file
+        fs::write(&file_path, b"hello world").unwrap();
+
+        // Compute hash
+        let hash = hash_file(&file_path).unwrap();
+
+        // Compute the expected hash using Blake3
+        let expected_hash = blake3::hash(b"hello world");
+
+        assert_eq!(hash, expected_hash);
+    }
+
+
+    #[test]
+    fn test_find_directory_in_parents() {
+        let temp_dir = tempdir().unwrap();
+        let base_dir = temp_dir.path().join("base");
+        let sub_dir = base_dir.join("subdir");
+
+        // Create directories
+        fs::create_dir_all(&sub_dir).unwrap();
+        fs::create_dir_all(base_dir.join(".buckets")).unwrap();
+
+        // Find `.buckets` directory starting from the subdirectory
+        let result = find_directory_in_parents(&sub_dir, ".buckets");
+        assert_eq!(result, Some(base_dir.join(".buckets")));
+
+        // Find `.buckets` starting from the base directory
+        let result = find_directory_in_parents(&base_dir, ".buckets");
+        assert_eq!(result, Some(base_dir.join(".buckets")));
+
+        // Find `.buckets` when it doesn't exist
+        let result = find_directory_in_parents(temp_dir.path(), ".buckets");
+        assert_eq!(result, None);
+    }
+
+
+    #[test]
+    fn test_find_bucket_repo() {
+        let temp_dir = tempdir().unwrap();
+        let base_dir = temp_dir.path().join("base");
+        let sub_dir = base_dir.join("subdir");
+
+        // Create `.buckets` directory
+        fs::create_dir_all(base_dir.join(".buckets")).unwrap();
+
+        // Find bucket repo starting from a subdirectory
+        let result = find_bucket_repo(&sub_dir);
+        assert_eq!(result, Some(base_dir.join(".buckets")));
+
+        // Find bucket repo starting from the base directory
+        let result = find_bucket_repo(&base_dir);
+        assert_eq!(result, Some(base_dir.join(".buckets")));
+
+        // Bucket repo doesn't exist
+        let result = find_bucket_repo(temp_dir.path());
+        assert_eq!(result, None);
+    }
+
+
+    #[test]
+    fn test_connect_to_db() {
+        let temp_dir = tempdir().unwrap();
+        let buckets_dir = temp_dir.path().join(".buckets");
+        let child_dir = temp_dir.path().join("child");
+
+        // Create `.buckets` directory and a DuckDB file
+        fs::create_dir_all(&buckets_dir).unwrap();
+        fs::create_dir_all(&child_dir).unwrap();
+        let db_path = buckets_dir.join("buckets.db");
+        let conn = duckdb::Connection::open(&db_path).unwrap();
+        conn.execute("CREATE TABLE test (id INTEGER);", []).unwrap();
+        conn.close().unwrap();
+
+        // Change the current directory to the `.buckets` directory
+        env::set_current_dir(&child_dir).unwrap();
+
+        // Connect to the database using the function
+        let result = connect_to_db();
+        assert!(result.is_ok());
+        let conn = result.unwrap();
+
+        // Ensure we can execute a query
+        conn.execute("SELECT 1;", []).unwrap();
+    }
+
 }

@@ -5,13 +5,12 @@ use std::{env, io};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use blake3::Hash;
-use duckdb::Connection;
 use serde::{Deserialize, Serialize};
 use toml::to_string;
 use uuid::Uuid;
 use crate::data::commit::{Commit, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::utils::utils::{db_location, find_bucket_repo, find_files_excluding_top_level_b, hash_file};
+use crate::utils::utils::{connect_to_db, find_bucket_repo, find_files_excluding_top_level_b, hash_file};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Bucket {
@@ -179,23 +178,6 @@ fn read_bucket_info(path: &PathBuf) -> Result<Bucket, std::io::Error> {
     let bucket = toml::from_str(&toml_string)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
     Ok(bucket)
-}
-
-fn connect_to_db() -> Result<Connection, BucketError> {
-    let path = match find_directory_in_parents(env::current_dir()?.as_path(), ".buckets") {
-        Some(path) => path,
-        None => return Err(BucketError::NotInBucketsRepo),
-    };
-
-    let db_location = db_location(path.as_path());
-    match Connection::open(db_location) {
-        Ok(conn) => {
-            return Ok(conn);
-        },
-        Err(e) => {
-            return Err(BucketError::DuckDB(e));
-        },
-    }
 }
 
 #[cfg(test)]
