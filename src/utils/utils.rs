@@ -70,6 +70,16 @@ pub fn find_directory_in_parents(start_path: &Path, target_dir_name: &str) -> Op
     None
 }
 
+pub fn find_bucket_path(dir_path: &Path) -> Option<PathBuf> {
+    match find_directory_in_parents(dir_path, ".b") {
+        Some(path) => Some(path),
+        None => None,
+    }.map(|mut path| {
+        path.pop();
+        path
+    })
+}
+
 pub fn find_bucket_repo(dir_path: &Path) -> Option<PathBuf> {
     match find_directory_in_parents(dir_path, ".buckets") {
         Some(path) => Some(path),

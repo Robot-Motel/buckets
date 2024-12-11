@@ -16,7 +16,7 @@ use crate::errors::BucketError;
 use crate::errors::BucketError::NotInBucketsRepo;
 use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
-use crate::utils::utils::{connect_to_db, find_directory_in_parents, find_files_excluding_top_level_b, hash_file};
+use crate::utils::utils::{connect_to_db, find_bucket_path, find_directory_in_parents, find_files_excluding_top_level_b, hash_file};
 
 pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
 
@@ -26,7 +26,7 @@ pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
         return Err(NotInBucketsRepo);
     }
 
-    let bucket_path = match find_directory_in_parents(&current_dir, ".b") {
+    let bucket_path = match find_bucket_path(&current_dir) {
         Some(path) => path,
         None => return Err(BucketError::NotAValidBucket),
     };

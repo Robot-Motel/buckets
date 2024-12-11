@@ -111,8 +111,7 @@ D select * from buckets
 
 ```bash
 cd test_bucket
-New-Item boat.blend -ItemType File
-"This is a blend file" | Out-File -FilePath .\boat.blend
+New-Item boat.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\boat.blend
 buckets commit 
 ```
 
