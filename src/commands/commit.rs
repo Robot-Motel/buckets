@@ -16,7 +16,7 @@ use crate::errors::BucketError;
 use crate::errors::BucketError::NotInBucketsRepo;
 use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
-use crate::utils::utils::{connect_to_db, find_bucket_path, find_directory_in_parents, find_files_excluding_top_level_b, hash_file};
+use crate::utils::utils::{connect_to_db, find_bucket_path, find_files_excluding_top_level_b, hash_file};
 
 pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
 
@@ -207,4 +207,70 @@ fn load_last_commit(bucket_name: String) -> Result<Option<Commit>, BucketError> 
         previous: None,
         next: None,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+    use std::fs::File;
+    use std::io::Write;
+    use std::str::FromStr;
+    use blake3::Hash;
+    use tempfile::tempdir;
+    use uuid::Uuid;
+    use crate::commands::commit::process_files;
+    use crate::data::bucket::read_bucket_info;
+    use crate::data::commit::{CommitStatus, CommittedFile};
+
+    #[test]
+    fn test_process_files() {
+        // Need to setup a proper test environment
+        let temp_dir = tempdir().unwrap().into_path();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd1.current_dir(temp_dir.as_path())
+            .arg("init")
+            .arg("test_repo")
+            .assert()
+            .success();
+
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let repo_dir = temp_dir.as_path().join("test_repo");
+        cmd2.current_dir(repo_dir.as_path())
+            .arg("create")
+            .arg("test_bucket")
+            .assert()
+            .success();
+
+        let bucket_dir = repo_dir.join("test_bucket");
+        let file_path = bucket_dir.join("test_file.txt");
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(b"test").unwrap();
+        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd3.current_dir(bucket_dir.as_path())
+            .arg("commit")
+            .arg("test message")
+            .assert()
+            .success();
+
+        // Bucket id is stored in the bucket info file
+        // Can be read first to get the bucket id and then use
+        // to query the database
+        let bucket = read_bucket_info(&bucket_dir).unwrap();
+
+        let commit_message = "Test commit".to_string();
+        let committed_file = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test_file.txt".to_string(),
+            hash: Hash::from_str("f4315de648c8440fb2539fe9a8417e901ab270a37c6e2267e0c5fffe7d4d4419").unwrap(),
+            status: CommitStatus::New,
+        };
+
+        // change to bucket directory
+        env::set_current_dir(&bucket_dir).unwrap();
+
+        let result = process_files(bucket.id, &bucket_dir, &[committed_file], &commit_message);
+        assert!(result.is_ok());
+
+    }
+
 }

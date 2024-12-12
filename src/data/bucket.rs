@@ -26,7 +26,9 @@ pub trait BucketTrait {
     fn is_valid_bucket(dir_path: &Path) -> bool;
     fn find_bucket(dir_path: &Path) -> Option<PathBuf>;
     fn get_full_bucket_path(&self) -> PathBuf;
+    #[allow(dead_code)]
     fn list_files_with_metadata_in_bucket(&self) -> io::Result<Commit>;
+    #[allow(dead_code)]
     fn load_last_commit(&self) -> Result<Option<Commit>, BucketError>;
 
 }
@@ -160,7 +162,7 @@ impl BucketTrait for Bucket {
     }
 }
 
-fn read_bucket_info(path: &PathBuf) -> Result<Bucket, std::io::Error> {
+pub fn read_bucket_info(path: &PathBuf) -> Result<Bucket, std::io::Error> {
     let info_path = path.join(".b").join("info");
     let mut file = File::open(&info_path).map_err(|e| {
         io::Error::new(
