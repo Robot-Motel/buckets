@@ -1,0 +1,30 @@
+%%{init: {'themeVariables': {'subgraphTitleTextAlign': 'left'}}}%%
+flowchart TD
+    subgraph check repo
+        A[Commit command] --> Z{Check if valid \n buckets repository}
+        Z --> |No| E1[Error: Not a valid buckets repository]
+    end
+
+    subgraph bucket check
+        Z --> |Yes| D{Check if valid \n bucket directory}
+    end
+
+    subgraph status repository
+        D -->|No| F[Read repository config file]
+        F --> H[Query database for all buckets]
+        H --> I[Print repository status]
+    end
+
+    subgraph status bucket
+        D -->|Yes| V[Read bucket config from file]
+        V --> J[Retrieve previous commit meta data]
+        J --> K[Compare previous commit with current files]
+        K --> L[Print bucket status]
+    end
+
+    I --> P((End))
+    H --> P((End))
+    L --> P((End))
+    E1 --> P((End))
+
+    style E1 fill:#f57474
