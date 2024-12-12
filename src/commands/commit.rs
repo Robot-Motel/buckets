@@ -176,7 +176,7 @@ fn list_files_with_metadata_in_bucket(bucket_path: PathBuf) -> io::Result<Commit
     })
 }
 
-fn load_last_commit(bucket_name: String) -> Result<Option<Commit>, BucketError> {
+pub fn load_last_commit(bucket_name: String) -> Result<Option<Commit>, BucketError> {
 
     let connection = connect_to_db()?;
 

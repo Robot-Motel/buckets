@@ -88,9 +88,9 @@ fn is_valid_duckdb_database(db_path: &Path) -> bool {
     }
 }
 
-pub fn is_valid_bucket(bucket_path: &Path) -> bool {
-    let buckets_path = find_directory_in_parents(bucket_path, ".b");
-    match buckets_path {
+pub fn is_valid_bucket(path: &Path) -> bool {
+    let bucket_path = find_bucket_path(path);
+    match bucket_path {
         Some(path) => has_valid_bucket_info(&path),
         None => false,
     }
@@ -129,6 +129,7 @@ pub fn is_valid_bucket_info(dir_path: &Path) -> bool {
 
 #[cfg(test)]
 use tempfile::tempdir;
+use crate::utils::utils::find_bucket_path;
 
 #[cfg(test)]
 mod tests {
