@@ -1,10 +1,11 @@
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 use blake3::Hash;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum CommitStatus {
     Unknown,
     New,
@@ -31,12 +32,14 @@ impl Default for CommitStatus {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CommittedFile {
     pub id: Uuid,
     pub name: String,
     #[serde(serialize_with = "hash_to_hex", deserialize_with = "hex_to_hash")]
     pub hash: Hash,
+    #[serde(serialize_with = "hash_to_hex", deserialize_with = "hex_to_hash")]
+    pub previous_hash: Hash,
     pub status: CommitStatus,
 }
 
@@ -99,6 +102,7 @@ impl Commit {
                                 id: file.id,
                                 name: file.name.clone(),
                                 hash: file.hash.clone(),
+                                previous_hash: other_file.hash.clone(),
                                 status: CommitStatus::Modified,
                             });
                         } else if file.name == other_file.name && file.hash == other_file.hash {
@@ -106,6 +110,7 @@ impl Commit {
                                 id: file.id,
                                 name: file.name.clone(),
                                 hash: other_file.hash.clone(),
+                                previous_hash: file.hash.clone(),
                                 status: CommitStatus::Committed,
                             });
                         }
@@ -125,6 +130,7 @@ impl Commit {
                             id: file.id,
                             name: file.name.clone(),
                             hash: file.hash.clone(),
+                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
                             status: CommitStatus::New,
                         });
                     }
@@ -144,6 +150,7 @@ impl Commit {
                                 id: other_file.id,
                                 name: other_file.name.clone(),
                                 hash: other_file.hash.clone(),
+                                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
                                 status: CommitStatus::Deleted,
                             });
                         }

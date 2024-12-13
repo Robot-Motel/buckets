@@ -4,6 +4,7 @@ use std::fs::File;
 use std::{env, io};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use blake3::Hash;
 use serde::{Deserialize, Serialize};
 use toml::to_string;
@@ -106,6 +107,7 @@ impl BucketTrait for Bucket {
                             id: Default::default(),
                             name: path.to_string_lossy().into_owned(),
                             hash,
+                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
                             status: CommitStatus::Unknown,
                         });
                     }
@@ -148,6 +150,7 @@ impl BucketTrait for Bucket {
                 id: Uuid::parse_str(&uuid_string).unwrap(),
                 name: row.get(1)?,
                 hash: Hash::from_hex(&hex_string).unwrap(),
+                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
                 status: CommitStatus::Committed,
             });
         }

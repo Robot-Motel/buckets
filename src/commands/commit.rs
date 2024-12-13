@@ -2,6 +2,7 @@ use std::{env, io};
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Error, ErrorKind};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use blake3::Hash;
 use duckdb::params;
 use log::{debug, error};
@@ -154,6 +155,7 @@ fn list_files_with_metadata_in_bucket(bucket_path: PathBuf) -> io::Result<Commit
                         id: Default::default(),
                         name: path.to_string_lossy().into_owned(),
                         hash,
+                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
                         status: CommitStatus::Unknown,
                     });
                 }
@@ -196,6 +198,7 @@ pub fn load_last_commit(bucket_name: String) -> Result<Option<Commit>, BucketErr
             id: Uuid::parse_str(&uuid_string).unwrap(),
             name: row.get(1)?,
             hash: Hash::from_hex(&hex_string).unwrap(),
+            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(), // TODO: Implement previous hash
             status: CommitStatus::Committed,
         });
     }
@@ -262,6 +265,7 @@ mod tests {
             id: Uuid::new_v4(),
             name: "test_file.txt".to_string(),
             hash: Hash::from_str("f4315de648c8440fb2539fe9a8417e901ab270a37c6e2267e0c5fffe7d4d4419").unwrap(),
+            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
             status: CommitStatus::New,
         };
 

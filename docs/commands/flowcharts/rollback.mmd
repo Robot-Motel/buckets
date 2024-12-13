@@ -1,0 +1,39 @@
+%%{init: {'themeVariables': {'subgraphTitleTextAlign': 'left'}}}%%
+flowchart TD
+    subgraph check repo
+        A[Rollback command] --> Z{Check if valid \n buckets repository}
+        Z --> |Yes| B[Read repository config file]
+        Z --> |No| E1[Error: Not a valid buckets repository]
+    end
+
+    subgraph bucket check
+        B --> C[Find top level bucket directory]
+        C --> D{Check if valid \n bucket directory}
+        D -->|Yes| V[Read bucket config from file]
+        D -->|No| E2[Error: Not a valid bucket directory]
+    end
+
+    subgraph BucketCommand
+        V --> H
+        H[Generate meta data list: blake3 hash and filename] --> I{Any files in list?}
+        I -->|Yes| J[Load previous commit meta data]
+        J --> K{Files in \n previous commit?}
+        K -->|Yes| L[Compare commits]
+        L --> N{Changes?}
+        N -->|Yes| Q
+
+        subgraph Loop[all files in commit]
+            Q[Uncompress files] --> R[Restore file]
+        end
+
+    end
+
+    R --> P((End))
+    N --> |No| P((End))
+    K --> |No| P((End))
+    I --> |No| P((End))
+    E1 --> |No| P((End))
+    E2 --> |No| P((End))
+
+    style E1 fill:#f57474
+    style E2 fill:#f57474
