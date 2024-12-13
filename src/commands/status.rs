@@ -6,15 +6,13 @@ use crate::args::StatusCommand;
 use crate::commands::commit::load_last_commit;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
-use crate::data::commit;
-use crate::data::commit::Commit;
 use crate::errors::BucketError;
 use crate::errors::BucketError::NotInBucketsRepo;
 use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
 use crate::utils::utils::{find_bucket_path, find_directory_in_parents};
 
-pub fn execute(status_command: &StatusCommand) -> Result<(), BucketError> {
+pub fn execute(_status_command: &StatusCommand) -> Result<(), BucketError> {
 
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 

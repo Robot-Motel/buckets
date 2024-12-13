@@ -4,7 +4,7 @@ mod tests {
     use duckdb::Connection;
     use predicates::prelude::predicate;
     use uuid::{Uuid, Version};
-    use super::*;
+    use crate::common::tests::get_test_dir;
 
     /// Test the `create` command.
     ///
@@ -15,7 +15,7 @@ mod tests {
     ///
     #[test]
     fn test_cli_create_no_repo() {
-        let temp_dir = common::get_test_dir();
+        let temp_dir = get_test_dir();
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
         cmd.current_dir(temp_dir.as_path())
             .arg("create")
@@ -27,7 +27,7 @@ mod tests {
 
     #[test]
     fn test_cli_create() {
-        let temp_dir = common::get_test_dir();
+        let temp_dir = get_test_dir();
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
         cmd.current_dir(temp_dir.as_path())
             .arg("init")

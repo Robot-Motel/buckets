@@ -16,11 +16,11 @@ pub enum CommitStatus {
 impl Display for CommitStatus {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CommitStatus::Unknown => write!(f, "Unknown"),
-            CommitStatus::New => write!(f, "New"),
-            CommitStatus::Committed => write!(f, "Committed"),
-            CommitStatus::Modified => write!(f, "Modified"),
-            CommitStatus::Deleted => write!(f, "Deleted"),
+            CommitStatus::Unknown => write!(f, "unknown"),
+            CommitStatus::New => write!(f, "new"),
+            CommitStatus::Committed => write!(f, "committed"),
+            CommitStatus::Modified => write!(f, "modified"),
+            CommitStatus::Deleted => write!(f, "deleted"),
         }
     }
 }

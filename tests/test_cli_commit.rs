@@ -3,9 +3,10 @@ mod common;
 mod tests {
     use std::fs::File;
     use std::io::Write;
+    use std::path::PathBuf;
     use duckdb::Connection;
     use uuid::{Uuid, Version};
-    use super::*;
+    use crate::common::tests::get_test_dir;
 
     /// Test the `commit` command.
     ///
@@ -16,21 +17,7 @@ mod tests {
     ///
     #[test]
     fn test_cli_commit() {
-        let temp_dir = common::get_test_dir();
-        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
-        cmd1.current_dir(temp_dir.as_path())
-            .arg("init")
-            .arg("test_repo")
-            .assert()
-            .success();
-
-        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
-        let repo_dir = temp_dir.as_path().join("test_repo");
-        cmd2.current_dir(repo_dir.as_path())
-            .arg("create")
-            .arg("test_bucket")
-            .assert()
-            .success();
+        let repo_dir = setup();
 
         let bucket_dir = repo_dir.join("test_bucket");
         let file_path = bucket_dir.join("test_file.txt");
@@ -94,4 +81,23 @@ mod tests {
 
     }
 }
+
+    fn setup() -> PathBuf {
+        let temp_dir = get_test_dir();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd1.current_dir(temp_dir.as_path())
+            .arg("init")
+            .arg("test_repo")
+            .assert()
+            .success();
+
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let repo_dir = temp_dir.as_path().join("test_repo");
+        cmd2.current_dir(repo_dir.as_path())
+            .arg("create")
+            .arg("test_bucket")
+            .assert()
+            .success();
+        repo_dir
+    }
 }

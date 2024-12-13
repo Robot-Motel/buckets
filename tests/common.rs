@@ -1,10 +1,14 @@
-use std::path::PathBuf;
-use tempfile::tempdir;
+#[cfg(test)]
+pub mod tests {
+    use std::path::PathBuf;
+    use tempfile::tempdir;
 
-pub fn get_test_dir() -> PathBuf {
-    let temp_dir = match std::env::var("TEST_DIR") {
-        Ok(val) => PathBuf::from(val),
-        Err(_) => tempdir().unwrap().into_path(),
-    };
-    temp_dir
+    #[allow(dead_code)]
+    pub fn get_test_dir() -> PathBuf {
+        let temp_dir = match std::env::var("TEST_DIR") {
+            Ok(val) => PathBuf::from(val),
+            Err(_) => tempdir().unwrap().into_path(),
+        };
+        temp_dir
+    }
 }
