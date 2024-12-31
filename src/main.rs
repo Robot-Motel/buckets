@@ -39,7 +39,7 @@ fn main() -> ExitCode {
 
     if let Err(msg) = res {
         set_failed();
-        println!("{}", msg.message());
+        eprintln!("{}", msg.message());
     }
 
     EXIT.with(|cell| cell.get())

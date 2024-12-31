@@ -3,7 +3,6 @@ use std::io;
 use std::io::{BufReader, BufWriter, Error, ErrorKind, Write};
 use std::path::PathBuf;
 use log::error;
-use predicates::ord::le;
 use zstd::stream::copy_decode;
 use zstd::stream::write::Decoder;
 use crate::args::RollbackCommand;

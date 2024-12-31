@@ -21,7 +21,7 @@ mod tests {
             .arg("create")
             .arg("test_bucket")
             .assert()
-            .stdout(predicate::str::contains("Not in a buckets repository"))
+            .stderr(predicate::str::contains("Not in a buckets repository"))
             .failure();
     }
 

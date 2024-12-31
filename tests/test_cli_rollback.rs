@@ -15,9 +15,10 @@ mod tests {
     fn test_cli_rollback() {
         let temp_dir = get_test_dir();
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
-        // cmd.current_dir(temp_dir.as_path())
-        //     .arg("rollback")
-        //     .assert()
-        //     .success();
+        cmd.current_dir(temp_dir.as_path())
+            .arg("rollback")
+            .assert()
+            .failure()
+            .stderr(predicates::str::contains("Not in a buckets repository\n"));
     }
 }
