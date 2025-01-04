@@ -25,6 +25,23 @@ pub enum Command {
 }
 
 #[derive(Parser)]
+#[clap(
+    name = "buckets",
+    version = env!("CARGO_PKG_VERSION"),
+    author("3vilM33pl3"),
+)]
+pub struct CliArguments {
+    #[command(subcommand)]
+    pub command: Command,
+}
+
+#[derive(Args)]
+pub struct SharedArguments {
+    #[clap(short, long)]
+    pub verbose: bool,
+}
+
+#[derive(Parser)]
 pub struct InitCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
@@ -117,14 +134,3 @@ pub struct FinalizeCommand {
     pub shared: SharedArguments,
 }
 
-#[derive(Parser)]
-pub struct CliArguments {
-    #[command(subcommand)]
-    pub command: Command,
-}
-
-#[derive(Args)]
-pub struct SharedArguments {
-    #[clap(short, long)]
-    pub verbose: bool,
-}

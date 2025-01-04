@@ -10,6 +10,7 @@ cargo install --path . # Install buckets
 Get-Command buckets.exe # Gives the location
 Set-Alias buckets "C:\Users\WindowsUser\.cargo\bin\buckets.exe" # Create alias
 winget install DuckDB.cli # Install command line DuckDB
+buckets --version # Check version
 ```
 
 ## Initialize a repository
