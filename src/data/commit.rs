@@ -92,13 +92,13 @@ impl Commit {
                 previous: _,
                 next: _,
             } => {
-                let mut changes = Vec::new();
+                let mut status_all_files = Vec::new();
 
                 // First check if existing files are the same
                 for file in self.files.iter() {
                     for other_file in other_commit.files.iter() {
                         if file.name == other_file.name && file.hash != other_file.hash {
-                            changes.push(CommittedFile {
+                            status_all_files.push(CommittedFile {
                                 id: file.id,
                                 name: file.name.clone(),
                                 hash: file.hash.clone(),
@@ -106,7 +106,7 @@ impl Commit {
                                 status: CommitStatus::Modified,
                             });
                         } else if file.name == other_file.name && file.hash == other_file.hash {
-                            changes.push(CommittedFile {
+                            status_all_files.push(CommittedFile {
                                 id: file.id,
                                 name: file.name.clone(),
                                 hash: other_file.hash.clone(),
@@ -126,7 +126,7 @@ impl Commit {
                         }
                     }
                     if !found {
-                        changes.push(CommittedFile {
+                        status_all_files.push(CommittedFile {
                             id: file.id,
                             name: file.name.clone(),
                             hash: file.hash.clone(),
@@ -137,7 +137,7 @@ impl Commit {
                 }
 
                 // Check if any files were deleted
-                if changes.len() < other_commit.files.len() {
+                if status_all_files.len() < other_commit.files.len() {
                     for other_file in other_commit.files.iter() {
                         let mut found = false;
                         for file in self.files.iter() {
@@ -146,7 +146,7 @@ impl Commit {
                             }
                         }
                         if !found {
-                            changes.push(CommittedFile {
+                            status_all_files.push(CommittedFile {
                                 id: other_file.id,
                                 name: other_file.name.clone(),
                                 hash: other_file.hash.clone(),
@@ -156,7 +156,7 @@ impl Commit {
                         }
                     }
                 }
-                return Some(changes);
+                return Some(status_all_files);
             }
 
         }
