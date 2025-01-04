@@ -113,7 +113,7 @@ D select * from buckets
 ```bash
 cd test_bucket
 New-Item boat.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\boat.blend
-buckets commit 
+buckets commit "new boat"
 ```
 
 ### Expected results
@@ -133,12 +133,12 @@ buckets commit
 ```bash
 duckdb .\test_repo\.buckets\buckets.db
 select * from commits;
-┌──────────────────────────────────────┬──────────────────────────────────────┬─────────┬─────────────────────────┐
-│                  id                  │              bucket_id               │ message │       created_at        │
-│                 uuid                 │                 uuid                 │ varchar │        timestamp        │
-├──────────────────────────────────────┼──────────────────────────────────────┼─────────┼─────────────────────────┤
-│ 2d7a0558-f206-4659-9629-3bec710f984f │ c1fdcb0b-757e-4631-bbb6-272c98b49424 │         │ 2024-09-27 14:54:52.097 │
-└──────────────────────────────────────┴──────────────────────────────────────┴─────────┴─────────────────────────┘
+┌──────────────────────────────────────┬──────────────────────────────────────┬─────────────────┬─────────────────────────┐
+│                  id                  │              bucket_id               │ message         │       created_at        │
+│                 uuid                 │                 uuid                 │ varchar         │        timestamp        │
+├──────────────────────────────────────┼──────────────────────────────────────┼─────────────────┼─────────────────────────┤
+│ 2d7a0558-f206-4659-9629-3bec710f984f │ c1fdcb0b-757e-4631-bbb6-272c98b49424 │ new boat        │ 2024-09-27 14:54:52.097 │
+└──────────────────────────────────────┴──────────────────────────────────────┴─────────────────┴─────────────────────────┘
 select * from files;
 ┌──────────────────────┬─────────────────────────────────────┬────────────┬──────────────────────────────────────────────────────────────────┐
 │          id          │              commit_id              │ file_path  │                               hash                               │
@@ -147,3 +147,38 @@ select * from files;
 │ c687a296-272f-46c9.  │ 2d7a0558-f206-4659-9629-3bec710f9.  │ boat.blend │ 1496dd00f4648d8c36876585488eb09efc7428c499223e96664e520fb27fc9e3 │
 └──────────────────────┴─────────────────────────────────────┴────────────┴──────────────────────────────────────────────────────────────────┘
 ```
+
+## Status
+
+```bash
+cd test_bucket
+New-Item anchor.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\anchor.blend
+buckets commit "new anchor"
+New-Item rudder.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\rudder.blend
+"This is a blend file for the boat" | Out-File -FilePath .\boat.blend
+buckets status
+```
+
+## Expected results
+
+```bash
+committed:    anchor.blend
+modified:    boat.blend
+new:    rudder.blend
+```
+
+## Rollback
+
+```bash
+buckets rollback
+buckets status
+```
+
+## Expected results
+
+```bash
+committed:    anchor.blend
+committed:    boat.blend
+new:    rudder.blend
+```
+

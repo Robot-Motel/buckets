@@ -2,6 +2,10 @@ mod common;
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::Write;
+    use std::path::PathBuf;
+    use predicates::prelude::predicate;
     use crate::common::tests::get_test_dir;
 
     /// Test the `rollback` command.
@@ -13,12 +17,61 @@ mod tests {
     ///
     #[test]
     fn test_cli_rollback() {
-        let temp_dir = get_test_dir();
-        let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
-        cmd.current_dir(temp_dir.as_path())
+        let repo_dir = setup();
+        let bucket_dir = repo_dir.join("test_bucket");
+
+        let file_path = bucket_dir.join("test_file.txt");
+        let mut file_1 = File::create(&file_path).unwrap();
+        file_1.write_all(b"test file 1").unwrap();
+
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd1.current_dir(bucket_dir.as_path())
+            .arg("commit")
+            .arg("test message")
+            .assert()
+            .success();
+
+        file_1.write_all(b"change file 1").unwrap();
+
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd2.current_dir(bucket_dir.as_path())
+            .arg("status")
+            .assert()
+            .stdout(predicate::str::contains("modified:    test_file.txt"))
+            .success();
+
+        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd3.current_dir(bucket_dir.as_path())
             .arg("rollback")
             .assert()
-            .failure()
-            .stderr(predicates::str::contains("Not in a buckets repository\n"));
+            .success();
+
+        let mut cmd4 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd4.current_dir(bucket_dir.as_path())
+            .arg("status")
+            .assert()
+            .stdout(predicate::str::contains("committed:    test_file.txt"))
+            .success();
+
+    }
+
+    fn setup() -> PathBuf {
+        let temp_dir = get_test_dir();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        cmd1.current_dir(temp_dir.as_path())
+            .arg("init")
+            .arg("test_repo")
+            .assert()
+            .success();
+
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let repo_dir = temp_dir.as_path().join("test_repo");
+        cmd2.current_dir(repo_dir.as_path())
+            .arg("create")
+            .arg("test_bucket")
+            .assert()
+            .success();
+
+        repo_dir
     }
 }
