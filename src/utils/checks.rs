@@ -124,11 +124,26 @@ pub fn is_valid_bucket_info(dir_path: &Path) -> bool {
     false
 }
 
+pub fn validate_path(path: &str) -> Result<PathBuf, String> {
+    let path_buf = PathBuf::from(path);
+    let resolved_path = if path_buf.is_relative() {
+        // Resolve relative path using CURRENT_DIR
+        CURRENT_DIR.with(|current_dir| current_dir.join(path_buf))
+    } else {
+        path_buf
+    };
 
+    if !resolved_path.exists() {
+        Err(format!("The path '{}' does not exist.", resolved_path.display()))
+    } else {
+        Ok(resolved_path)
+    }
+}
 
 
 #[cfg(test)]
 use tempfile::tempdir;
+use crate::CURRENT_DIR;
 use crate::utils::utils::find_bucket_path;
 
 #[cfg(test)]

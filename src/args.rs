@@ -1,3 +1,5 @@
+use crate::utils::checks::validate_path;
+use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Subcommand)]
@@ -76,6 +78,9 @@ pub struct RevertCommand {
 
 #[derive(Args)]
 pub struct RollbackCommand {
+    #[clap(short, long, value_name = "PATH", value_parser = validate_path)]
+    pub path: Option<PathBuf>,
+
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
