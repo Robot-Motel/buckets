@@ -135,9 +135,12 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
 
     if !resolved_path.exists() {
         Err(format!("The path '{}' does not exist.", resolved_path.display()))
+    } else if !resolved_path.is_file() {
+        Err(format!("'{}' is not a file.", resolved_path.display()))
     } else {
         Ok(resolved_path)
     }
+
 }
 
 

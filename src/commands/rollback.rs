@@ -13,20 +13,61 @@ use crate::data::commit::{CommitStatus, CommittedFile};
 use crate::errors::BucketError;
 use crate::errors::BucketError::NotInBucketsRepo;
 use crate::utils::checks;
-use crate::utils::utils::find_bucket_path;
+use crate::utils::utils::{find_bucket_path, hash_file};
 
-pub fn execute(_rollback_command: &RollbackCommand) -> Result<(), BucketError> {
+pub fn execute(rollback_command: &RollbackCommand) -> Result<(), BucketError> {
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
     if !checks::is_valid_bucket_repo(&current_dir) {
         return Err(NotInBucketsRepo);
     }
 
-    let bucket_path = match find_bucket_path(&current_dir) {
+    let _ = match find_bucket_path(&current_dir) {
         Some(path) => path,
         None => return Err(BucketError::NotAValidBucket),
     };
 
+    match &rollback_command.path {
+        None => rollback_all(&current_dir),
+        Some(path) => rollback_single_file(&current_dir, &path)
+    }
+}
+
+fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), BucketError> {
+    if !file.exists() {
+        return Err(BucketError::from(Error::new(ErrorKind::NotFound, "File not found.")));
+    }
+
+    let bucket = Bucket::from_meta_data(&bucket_path)?;
+
+    match load_last_commit(bucket.name) {
+            Ok(None) => {
+                Err(BucketError::from(Error::new(ErrorKind::NotFound, "No previous commit found.")))
+            }
+            Ok(Some(previous_commit)) => {
+
+                let found_file = previous_commit.files.iter().find(|committed_file|
+                    committed_file.name == file.to_str().unwrap() && committed_file.hash == hash_file(file).unwrap());
+                match found_file {
+                    None => {
+                        Err(BucketError::from(Error::new(ErrorKind::NotFound, "File not found in previous commit.")))
+                    },
+                    Some(file_to_restore) => {
+                        restore_file(&bucket_path, file_to_restore)?;
+                        Ok(())
+                    }
+                }.expect("Failed to restore file.");
+
+                Ok(())
+            }
+        _ => {
+            error!("Failed to load previous commit.");
+            Err(BucketError::from(Error::new(ErrorKind::Other, "Failed to load previous commit.")))
+        }
+    }
+}
+
+fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
     // Read the bucket's metadata
     let bucket = Bucket::from_meta_data(&bucket_path)?;
     let bucket_files = bucket.list_files_with_metadata_in_bucket()?;
@@ -54,15 +95,14 @@ pub fn execute(_rollback_command: &RollbackCommand) -> Result<(), BucketError> {
                 .iter()
                 .filter(|change| change.status == CommitStatus::Modified)
                 .for_each(|change| {
-                restore_file(&bucket_path, change).unwrap();
-            });
+                    restore_file(&bucket_path, change).unwrap();
+                });
         }
         Err(_) => {
             error!("Failed to load previous commit.");
             return Err(BucketError::from(Error::new(ErrorKind::Other, "Failed to load previous commit.")));
         }
     }
-
 
     Ok(())
 }
