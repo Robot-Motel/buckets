@@ -2,20 +2,24 @@
 flowchart TD
     subgraph check repo
         A[Rollback command] --> Z{Check if valid \n buckets repository}
-        Z --> |Yes| B[Read repository config file]
         Z --> |No| E1[Error: Not a valid buckets repository]
     end
 
     subgraph bucket check
-        B --> C[Find top level bucket directory]
+        Z --> |Yes| C[Find top level bucket directory]
         C --> D{Check if valid \n bucket directory}
-        D -->|Yes| V[Read bucket config from file]
         D -->|No| E2[Error: Not a valid bucket directory]
     end
 
-    subgraph BucketCommand
-        V --> H
-        H[Generate meta data list: blake3 hash and filename] --> I{Any files in list?}
+    subgraph single or all
+        D --> |Yes| T{Has filename on command line?}
+        T --> |Yes| T1[Rollback single file]
+        T --> |No| T3[Rollback all files]
+    end
+
+    subgraph rollback all files
+        T3 --> H[Generate meta data list: blake3 hash and filename]
+        H --> I{Any files in list?}
         I -->|Yes| J[Load previous commit meta data]
         J --> K{Files in \n previous commit?}
         K -->|Yes| L[Compare commits]
@@ -28,7 +32,23 @@ flowchart TD
 
     end
 
+    subgraph rollback single file
+        T1 --> S1{Does file exist?}
+        S1 -->|No| S2[Error: File not found]
+        S1 -->|Yes| S3[Create Bucket object]
+        S3 --> S4[Load previous commit]
+        S4 --> S5{Is there a previous commit?}
+        S5 -->|No| S6[Error: No previous commit]
+        S5 -->|Yes| S7{Check if file is in previous commit}
+        S7 -->|None| S8[Error: File not in previous commit]
+        S7 -->|Some| S9[Restore file]
+    end
+
     R --> P((End))
+    S2 --> P((End))
+    S6 --> P((End))
+    S8 --> P((End))
+    S9 --> P((End))
     N --> |No| P((End))
     K --> |No| P((End))
     I --> |No| P((End))
