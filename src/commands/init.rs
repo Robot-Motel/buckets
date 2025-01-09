@@ -67,7 +67,8 @@ fn create_database(location: &Path) -> Result<(), duckdb::Error> {
         "CREATE TABLE buckets (
             id UUID PRIMARY KEY,
             name TEXT NOT NULL,
-            path TEXT NOT NULL
+            path TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )",
         [],
     ) {

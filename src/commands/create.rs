@@ -1,3 +1,4 @@
+use chrono::Utc;
 use duckdb::Connection;
 use log::error;
 use uuid::Uuid;
@@ -30,11 +31,12 @@ pub fn execute(create_command: &CreateCommand) -> Result<(), BucketError> {
 
     let db_path = buckets_repo_path.join("buckets.db");
     let connection = Connection::open(db_path)?;
+    let timestamp = Utc::now().to_rfc3339();
 
     match connection
         .execute(
-            "INSERT INTO buckets (id, name, path) VALUES (gen_random_uuid(), ?1, ?2)",
-            &[&bucket_name, relative_path.to_str().unwrap()],
+            "INSERT INTO buckets (id, name, path, created_at) VALUES (gen_random_uuid(), ?1, ?2, ?3)",
+            &[&bucket_name, relative_path.to_str().unwrap(), &timestamp],
         )
         .map_err(|e| {
             std::io::Error::new(
