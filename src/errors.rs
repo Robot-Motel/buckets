@@ -15,6 +15,8 @@ pub enum BucketError {
     NotInBucketsRepo,
     #[error("Not a valid bucket")]
     NotAValidBucket,
+    #[error("Invalid data {0}")]
+    InvalidData(String),
 }
 
 impl BucketError {
@@ -27,6 +29,7 @@ impl BucketError {
             BucketError::NotInBucketsRepo => "Not in a buckets repository".to_string(),
             // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
             BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
+            BucketError::InvalidData(message) => format!("Invalid data {}", message),
         }
     }
 }
@@ -34,5 +37,10 @@ impl BucketError {
 impl From<&str> for BucketError {
     fn from(error: &str) -> Self {
         BucketError::IoError(io::Error::new(io::ErrorKind::Other, error))
+    }
+}
+impl From<BucketError> for duckdb::Error {
+    fn from(error: BucketError) -> duckdb::Error {
+        duckdb::Error::ToSqlConversionFailure(Box::new(error))
     }
 }

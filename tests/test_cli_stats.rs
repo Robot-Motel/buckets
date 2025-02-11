@@ -11,7 +11,7 @@ mod tests {
     ///
     #[test]
     fn test_cli_stats() {
-        let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd.arg("stats")
             .assert()
             .success();

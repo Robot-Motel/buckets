@@ -54,7 +54,7 @@ fn bucket_status(bucket: &Bucket) -> Result<(), BucketError> {
             });
         }
         Ok(Some(previous_commit)) => {
-            let changes = bucket_files.compare(&previous_commit).unwrap();
+            let changes = bucket_files.compare(&previous_commit).ok_or_else(|| BucketError::from("Failed to compare files."))?;
             changes.iter().for_each(|change| {
                 println!("{}:    {}", change.status, change.name);
             });
@@ -71,30 +71,33 @@ fn bucket_status(bucket: &Bucket) -> Result<(), BucketError> {
 }
 
 fn repository_status() -> Result<(), BucketError> {
-    let repo_config = RepositoryConfig::from_file(env::current_dir().unwrap())?;
+    let repo_config = RepositoryConfig::from_file(env::current_dir().expect("invalid dir"))?;
     println!("Repository config: {:?}", repo_config);
-    let buckets = query_buckets();
+    let buckets = query_buckets().map_err(|e| BucketError::from(e))?;
     println!("Number of buckets: {:?}", buckets.len());
     println!("Buckets: {:?}", buckets);
     Ok(())
 }
 
-fn query_buckets() -> Vec<Bucket> {
-    let db_path = find_directory_in_parents(&env::current_dir().unwrap(), ".buckets").unwrap().join("buckets.db");
-    let connection = Connection::open(db_path).unwrap();
-    let mut stmt = connection.prepare("SELECT id, name, path FROM buckets").unwrap();
+fn query_buckets() -> Result<Vec<Bucket>, BucketError> {
+    let db_path = find_directory_in_parents(&env::current_dir().expect("invalid dir"), ".buckets").expect("invalid dir").join("buckets.db");
+    let connection = Connection::open(db_path).expect("failed to open database");
+    let mut stmt = connection.prepare("SELECT id, name, path FROM buckets").map_err(|e| BucketError::from(e))?;
     let bucket_iter = stmt.query_map([], |row| {
         let uuid_str: String = row.get(0)?;
         let path_str: String = row.get(2)?;
+        let uuid = uuid::Uuid::parse_str(&uuid_str)
+            .map_err(|e| BucketError::InvalidData(e.to_string()))?;
         Ok(Bucket {
-            id: uuid::Uuid::parse_str(&uuid_str).unwrap(),
+            id: uuid,
             name: row.get(1)?,
             relative_bucket_path: std::path::PathBuf::from(path_str),
         })
-    }).unwrap();
+    }).map_err(BucketError::from)?;
     let mut buckets = Vec::new();
     for bucket in bucket_iter {
-        buckets.push(bucket.unwrap());
+        buckets.push(bucket.map_err(BucketError::from)?); // Ensure all errors are converted properly
     }
-    buckets
+
+    Ok(buckets)
 }

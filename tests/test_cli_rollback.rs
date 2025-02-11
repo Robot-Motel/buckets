@@ -21,32 +21,32 @@ mod tests {
         let bucket_dir = repo_dir.join("test_bucket");
 
         let file_path = bucket_dir.join("test_file.txt");
-        let mut file_1 = File::create(&file_path).unwrap();
-        file_1.write_all(b"test file 1").unwrap();
+        let mut file_1 = File::create(&file_path).expect("Failed to create file");
+        file_1.write_all(b"test file 1").expect("Failed to write to file");
 
-        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd1.current_dir(bucket_dir.as_path())
             .arg("commit")
             .arg("test message")
             .assert()
             .success();
 
-        file_1.write_all(b"change file 1").unwrap();
+        file_1.write_all(b"change file 1").expect("Failed to write to file");
 
-        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd2.current_dir(bucket_dir.as_path())
             .arg("status")
             .assert()
             .stdout(predicate::str::contains("modified:    test_file.txt"))
             .success();
 
-        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd3.current_dir(bucket_dir.as_path())
             .arg("rollback")
             .assert()
             .success();
 
-        let mut cmd4 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd4 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd4.current_dir(bucket_dir.as_path())
             .arg("status")
             .assert()
@@ -57,14 +57,14 @@ mod tests {
 
     fn setup() -> PathBuf {
         let temp_dir = get_test_dir();
-        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")
             .arg("test_repo")
             .assert()
             .success();
 
-        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         let repo_dir = temp_dir.as_path().join("test_repo");
         cmd2.current_dir(repo_dir.as_path())
             .arg("create")

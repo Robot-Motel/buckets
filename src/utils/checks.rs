@@ -156,16 +156,16 @@ mod tests {
 
     #[test]
     fn test_find_directory_in_parents() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let target_dir_name = "target_directory";
 
         // Create a nested directory structure
         let nested_dir_path = temp_dir.path().join("a/b/c/d/e");
-        create_dir_all(&nested_dir_path).unwrap();
+        create_dir_all(&nested_dir_path).expect("Failed to create nested directory structure");
 
         // Create the target directory
         let target_dir_path = temp_dir.path().join("a/target_directory");
-        create_dir_all(&target_dir_path).unwrap();
+        create_dir_all(&target_dir_path).expect("Failed to create target directory");
 
         // Start the search from the deepest directory
         let start_path = nested_dir_path;
@@ -173,21 +173,21 @@ mod tests {
         // Perform the test
         let result = find_directory_in_parents(&start_path, target_dir_name);
         assert!(result.is_some());
-        assert_eq!(result.unwrap(), target_dir_path);
+        assert_eq!(result.expect(""), target_dir_path);
     }
 
     #[test]
     fn test_find_directory_in_current_dir() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let target_dir_name = "target_directory";
 
         // Create a nested directory structure
         let nested_dir_path = temp_dir.path().join("a");
-        create_dir_all(&nested_dir_path).unwrap();
+        create_dir_all(&nested_dir_path).expect("Failed to create nested directory structure");
 
         // Create the target directory
         let target_dir_path = temp_dir.path().join("a/target_directory");
-        create_dir_all(&target_dir_path).unwrap();
+        create_dir_all(&target_dir_path).expect("Failed to create target directory");
 
         // Start the search from the deepest directory
         let start_path = nested_dir_path;
@@ -195,17 +195,17 @@ mod tests {
         // Perform the test
         let result = find_directory_in_parents(&start_path, target_dir_name);
         assert!(result.is_some());
-        assert_eq!(result.unwrap(), target_dir_path);
+        assert_eq!(result.expect(""), target_dir_path);
     }
 
     #[test]
     fn test_find_directory_in_parents_not_found() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let target_dir_name = "target_directory";
 
         // Create a nested directory structure
         let nested_dir_path = temp_dir.path().join("a/b/c/d/e");
-        create_dir_all(&nested_dir_path).unwrap();
+        create_dir_all(&nested_dir_path).expect("Failed to create nested directory structure");
 
         // Start the search from the deepest directory
         let start_path = nested_dir_path;
@@ -218,7 +218,7 @@ mod tests {
     #[test]
     fn test_is_valid_bucket_repo_empty_repo_dir() {
         // Create a temporary directory to simulate a bucket repository
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
 
         // Case 1: No `.buckets` directory
         assert!(!is_valid_bucket_repo(temp_dir.path()));
@@ -228,10 +228,10 @@ mod tests {
     #[test]
     fn test_is_valid_bucket_repo_empty_buckets_dir() {
         // Create a temporary directory to simulate a bucket repository
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let buckets_dir = temp_dir.path().join(".buckets");
-
-        fs::create_dir_all(&buckets_dir).unwrap();
+        
+        fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
         assert!(!is_valid_bucket_repo(temp_dir.path()));
 
     }
@@ -239,12 +239,12 @@ mod tests {
     #[test]
     fn test_is_valid_bucket_repo_no_db() {
         // Create a temporary directory to simulate a bucket repository
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let buckets_dir = temp_dir.path().join(".buckets");
         let config_path = buckets_dir.join("config");
 
-        fs::create_dir_all(&buckets_dir).unwrap();
-        fs::File::create(&config_path).unwrap();
+        fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
+        fs::File::create(&config_path).expect("Failed to create config file");
         assert!(!is_valid_bucket_repo(temp_dir.path()));
 
     }
@@ -252,16 +252,16 @@ mod tests {
     #[test]
     fn test_is_valid_bucket_repo_with_valid_repo() {
         // Create a temporary directory to simulate a bucket repository
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let buckets_dir = temp_dir.path().join(".buckets");
         let db_path = buckets_dir.join("buckets.db");
         let config_path = buckets_dir.join("config");
 
-        fs::create_dir_all(&buckets_dir).unwrap();
-        fs::File::create(&config_path).unwrap();
-        let conn = duckdb::Connection::open(&db_path).unwrap();
-        conn.execute("CREATE TABLE test (id INTEGER);", []).unwrap(); // Create a valid table
-        conn.close().unwrap();
+        fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
+        fs::File::create(&config_path).expect("Failed to create config file");
+        let conn = duckdb::Connection::open(&db_path).expect("Failed to create DuckDB connection");
+        conn.execute("CREATE TABLE test (id INTEGER);", []).expect("error executing sql"); // Create a valid table
+        conn.close().expect("Failed to close DuckDB connection");
 
         assert!(is_valid_bucket_repo(temp_dir.path()));
 
@@ -269,22 +269,22 @@ mod tests {
 
     #[test]
     fn test_invalid_bucket_repo() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         assert!(!is_valid_bucket_repo(temp_dir.path()));
     }
 
     #[test]
     fn test_valid_repo_config() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let config_file = temp_dir.path().join("config");
-        File::create(&config_file).unwrap();
+        File::create(&config_file).expect("Failed to create config file");
 
         assert!(is_valid_repo_config(temp_dir.path()));
     }
 
     #[test]
     fn test_invalid_repo_config() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         assert!(!is_valid_repo_config(temp_dir.path()));
     }
 }

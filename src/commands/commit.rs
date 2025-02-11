@@ -40,7 +40,7 @@ pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
         }
     };
 
-    let _repo_config = RepositoryConfig::from_file(env::current_dir().unwrap())?;
+    let _repo_config = RepositoryConfig::from_file(env::current_dir().expect("invalid directory"))?;
 
     // create a list of each file in the bucket directory, recursively
     // and create a blake3 hash for each file and add to current_commit
@@ -115,7 +115,7 @@ fn insert_file_into_db(commit_id: &str, file_path: &str, hash: &str) -> Result<(
 
 fn insert_commit_into_db(bucket_id: Uuid, message: &String) -> Result<String, BucketError> {
     let connection = connect_to_db()?;
-    debug!("CommitCommand: path to database {}",connection.path().unwrap().display());
+    debug!("CommitCommand: path to database {}",connection.path().expect("invalid connection path").display());
     // Now query back the `id` using the `rowid`
     let stmt = &mut connection.prepare("INSERT INTO commits (id, bucket_id, message) VALUES (gen_random_uuid(), ?1, ?2) RETURNING id")?;
     let rows = &mut stmt.query(params![bucket_id.to_string().to_uppercase(), message.parse::<String>().unwrap()])?;
@@ -155,7 +155,7 @@ fn list_files_with_metadata_in_bucket(bucket_path: PathBuf) -> io::Result<Commit
                         id: Default::default(),
                         name: path.to_string_lossy().into_owned(),
                         hash,
-                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("invalid hash"),
                         status: CommitStatus::Unknown,
                     });
                 }
@@ -195,10 +195,10 @@ pub fn load_last_commit(bucket_name: String) -> Result<Option<Commit>, BucketErr
         let hex_string: String = row.get(2)?;
 
         files.push(CommittedFile {
-            id: Uuid::parse_str(&uuid_string).unwrap(),
+            id: Uuid::parse_str(&uuid_string).expect("invalid uuid"),
             name: row.get(1)?,
-            hash: Hash::from_hex(&hex_string).unwrap(),
-            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(), // TODO: Implement previous hash
+            hash: Hash::from_hex(&hex_string).expect("invalid hash"),
+            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("invalid hash"), // TODO: Implement previous hash
             status: CommitStatus::Committed,
         });
     }
@@ -228,15 +228,15 @@ mod tests {
     #[test]
     fn test_process_files() {
         // Need to setup a proper test environment
-        let temp_dir = tempdir().unwrap().into_path();
-        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")
             .arg("test_repo")
             .assert()
             .success();
 
-        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         let repo_dir = temp_dir.as_path().join("test_repo");
         cmd2.current_dir(repo_dir.as_path())
             .arg("create")
@@ -246,9 +246,9 @@ mod tests {
 
         let bucket_dir = repo_dir.join("test_bucket");
         let file_path = bucket_dir.join("test_file.txt");
-        let mut file = File::create(&file_path).unwrap();
-        file.write_all(b"test").unwrap();
-        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut file = File::create(&file_path).expect("invalid file");
+        file.write_all(b"test").expect("invalid write");
+        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd3.current_dir(bucket_dir.as_path())
             .arg("commit")
             .arg("test message")
@@ -258,19 +258,19 @@ mod tests {
         // Bucket id is stored in the bucket info file
         // Can be read first to get the bucket id and then use
         // to query the database
-        let bucket = read_bucket_info(&bucket_dir).unwrap();
+        let bucket = read_bucket_info(&bucket_dir).expect("invalid bucket info");
 
         let commit_message = "Test commit".to_string();
         let committed_file = CommittedFile {
             id: Uuid::new_v4(),
             name: "test_file.txt".to_string(),
-            hash: Hash::from_str("f4315de648c8440fb2539fe9a8417e901ab270a37c6e2267e0c5fffe7d4d4419").unwrap(),
-            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            hash: Hash::from_str("f4315de648c8440fb2539fe9a8417e901ab270a37c6e2267e0c5fffe7d4d4419").expect("invalid hash"),
+            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("invalid hash"),
             status: CommitStatus::New,
         };
 
         // change to bucket directory
-        env::set_current_dir(&bucket_dir).unwrap();
+        env::set_current_dir(&bucket_dir).expect("invalid directory");
 
         let result = process_files(bucket.id, &bucket_dir, &[committed_file], &commit_message);
         assert!(result.is_ok());

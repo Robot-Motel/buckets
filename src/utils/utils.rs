@@ -113,9 +113,9 @@ mod tests {
 
     #[test]
     fn test_delete_and_create_tmp_dir() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let bucket_tmp_path = temp_dir.path().join("bucket").join(".b").join("tmp");
-        create_dir_all(&bucket_tmp_path).unwrap();
+        create_dir_all(&bucket_tmp_path).expect("failed to create tmp dir");
 
         let bucket_path = temp_dir.path().join("bucket");
         let result = delete_and_create_tmp_dir(&bucket_path);
@@ -125,9 +125,9 @@ mod tests {
 
     #[test]
     fn test_delete_and_create_tmp_dir_not_exist() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let bucket_b_path = temp_dir.path().join("bucket").join(".b");
-        create_dir_all(&bucket_b_path).unwrap();
+        create_dir_all(&bucket_b_path).expect("failed to create .b dir");
 
         let bucket_path = temp_dir.path().join("bucket");
         let result = delete_and_create_tmp_dir(&bucket_path);
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn test_is_not_in_dir() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let dir_path = temp_dir.path();
 
         // Create test files and directories
@@ -146,21 +146,21 @@ mod tests {
         // ./subdir/file3.txt
         // ./subdir/subsubdir/file4.txt
         // ./.b/subsubdir/file5.txt
-        fs::create_dir_all(dir_path.join(".b").join("subsubdir")).unwrap();
-        fs::create_dir_all(dir_path.join("subdir").join("subsubdir")).unwrap();
-        fs::write(dir_path.join("file1.txt"), b"file1").unwrap();
-        fs::write(dir_path.join(".b").join("file2.txt"), b"file2").unwrap();
-        fs::write(dir_path.join("subdir").join("file3.txt"), b"file3").unwrap();
-        fs::write(dir_path.join("subdir").join("subsubdir").join("file4.txt"), b"file4").unwrap();
-        fs::write(dir_path.join(".b").join("subsubdir").join("file5.txt"), b"file5").unwrap();
+        fs::create_dir_all(dir_path.join(".b").join("subsubdir")).expect("failed to create .b/subsubdir");
+        fs::create_dir_all(dir_path.join("subdir").join("subsubdir")).expect("failed to create subdir/subsubdir");
+        fs::write(dir_path.join("file1.txt"), b"file1").expect("failed to write file1.txt");
+        fs::write(dir_path.join(".b").join("file2.txt"), b"file2").expect("failed to write .b/file2.txt");
+        fs::write(dir_path.join("subdir").join("file3.txt"), b"file3").expect("failed to write subdir/file3.txt");
+        fs::write(dir_path.join("subdir").join("subsubdir").join("file4.txt"), b"file4").expect("failed to write subdir/subsubdir/file4.txt");
+        fs::write(dir_path.join(".b").join("subsubdir").join("file5.txt"), b"file5").expect("failed to write .b/subsubdir/file5.txt");
 
         let root_dir = dir_path;
 
-        let entry_file1 = WalkDir::new(dir_path.join("file1.txt")).into_iter().next().unwrap().unwrap();
-        let entry_file2 = WalkDir::new(dir_path.join(".b").join("file2.txt")).into_iter().next().unwrap().unwrap();
-        let entry_file3 = WalkDir::new(dir_path.join("subdir").join("file3.txt")).into_iter().next().unwrap().unwrap();
-        let entry_file4 = WalkDir::new(dir_path.join("subdir").join("subsubdir").join("file4.txt")).into_iter().next().unwrap().unwrap();
-        let entry_file5 = WalkDir::new(dir_path.join(".b").join("subsubdir").join("file5.txt")).into_iter().next().unwrap().unwrap();
+        let entry_file1 = WalkDir::new(dir_path.join("file1.txt")).into_iter().next().expect("failed to get entry").expect("failed to get entry");
+        let entry_file2 = WalkDir::new(dir_path.join(".b").join("file2.txt")).into_iter().next().expect("failed to get entry").expect("failed to get entry");
+        let entry_file3 = WalkDir::new(dir_path.join("subdir").join("file3.txt")).into_iter().next().expect("failed to get entry").expect("failed to get entry");
+        let entry_file4 = WalkDir::new(dir_path.join("subdir").join("subsubdir").join("file4.txt")).into_iter().next().expect("failed to get entry").expect("failed to get entry");
+        let entry_file5 = WalkDir::new(dir_path.join(".b").join("subsubdir").join("file5.txt")).into_iter().next().expect("failed to get entry").expect("failed to get entry");
 
         assert!(is_not_in_dir(&entry_file1, root_dir, ".b"));
         assert!(!is_not_in_dir(&entry_file2, root_dir, ".b"));
@@ -169,7 +169,7 @@ mod tests {
         assert!(!is_not_in_dir(&entry_file5, root_dir, ".b"));
         assert!(is_not_in_dir(&entry_file5, root_dir, "other"));
 
-        temp_dir.close().unwrap();
+        temp_dir.close().expect("failed to delete temp dir");
     }
     #[test]
     fn test_make_relative_path() {
@@ -185,15 +185,15 @@ mod tests {
 
     #[test]
     fn test_find_files_excluding_top_level_b() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let dir_path = temp_dir.path();
 
         // Create files and directories
-        fs::create_dir_all(dir_path.join(".b").join("subdir")).unwrap();
-        fs::create_dir_all(dir_path.join("subdir")).unwrap();
-        fs::write(dir_path.join("file1.txt"), b"file1").unwrap();
-        fs::write(dir_path.join(".b").join("file2.txt"), b"file2").unwrap();
-        fs::write(dir_path.join("subdir").join("file3.txt"), b"file3").unwrap();
+        fs::create_dir_all(dir_path.join(".b").join("subdir")).expect("failed to create .b/subdir");
+        fs::create_dir_all(dir_path.join("subdir")).expect("failed to create subdir");
+        fs::write(dir_path.join("file1.txt"), b"file1").expect("failed to write file1.txt");
+        fs::write(dir_path.join(".b").join("file2.txt"), b"file2").expect("failed to write .b/file2.txt");
+        fs::write(dir_path.join("subdir").join("file3.txt"), b"file3").expect("failed to write subdir/file3.txt");
 
         // Collect relative paths of all files, excluding `.b` directory
         let files = find_files_excluding_top_level_b(dir_path);
@@ -206,14 +206,14 @@ mod tests {
 
     #[test]
     fn test_hash_file() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let file_path = temp_dir.path().join("test_file.txt");
 
         // Write some content to the file
-        fs::write(&file_path, b"hello world").unwrap();
+        fs::write(&file_path, b"hello world").expect("failed to write to file");
 
         // Compute hash
-        let hash = hash_file(&file_path).unwrap();
+        let hash = hash_file(&file_path).expect("failed to hash file");
 
         // Compute the expected hash using Blake3
         let expected_hash = blake3::hash(b"hello world");
@@ -224,13 +224,13 @@ mod tests {
 
     #[test]
     fn test_find_directory_in_parents() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let base_dir = temp_dir.path().join("base");
         let sub_dir = base_dir.join("subdir");
 
         // Create directories
-        fs::create_dir_all(&sub_dir).unwrap();
-        fs::create_dir_all(base_dir.join(".buckets")).unwrap();
+        fs::create_dir_all(&sub_dir).expect("failed to create subdirectory");
+        fs::create_dir_all(base_dir.join(".buckets")).expect("failed to create .buckets directory");
 
         // Find `.buckets` directory starting from the subdirectory
         let result = find_directory_in_parents(&sub_dir, ".buckets");
@@ -248,12 +248,12 @@ mod tests {
 
     #[test]
     fn test_find_bucket_repo() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let base_dir = temp_dir.path().join("base");
         let sub_dir = base_dir.join("subdir");
 
         // Create `.buckets` directory
-        fs::create_dir_all(base_dir.join(".buckets")).unwrap();
+        fs::create_dir_all(base_dir.join(".buckets")).expect("failed to create .buckets directory");
 
         // Find bucket repo starting from a subdirectory
         let result = find_bucket_repo(&sub_dir);
@@ -271,28 +271,28 @@ mod tests {
 
     #[test]
     fn test_connect_to_db() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("failed to create temp dir");
         let buckets_dir = temp_dir.path().join(".buckets");
         let child_dir = temp_dir.path().join("child");
 
         // Create `.buckets` directory and a DuckDB file
-        fs::create_dir_all(&buckets_dir).unwrap();
-        fs::create_dir_all(&child_dir).unwrap();
+        fs::create_dir_all(&buckets_dir).expect("failed to create .buckets directory");
+        fs::create_dir_all(&child_dir).expect("failed to create child directory");
         let db_path = buckets_dir.join("buckets.db");
-        let conn = duckdb::Connection::open(&db_path).unwrap();
-        conn.execute("CREATE TABLE test (id INTEGER);", []).unwrap();
-        conn.close().unwrap();
+        let conn = duckdb::Connection::open(&db_path).expect("failed to open database");
+        conn.execute("CREATE TABLE test (id INTEGER);", []).expect("failed to create table");
+        conn.close().expect("failed to close connection");
 
         // Change the current directory to the `.buckets` directory
-        env::set_current_dir(&child_dir).unwrap();
+        env::set_current_dir(&child_dir).expect("failed to change directory");
 
         // Connect to the database using the function
         let result = connect_to_db();
         assert!(result.is_ok());
-        let conn = result.unwrap();
+        let conn = result.expect("failed to connect to database");
 
         // Ensure we can execute a query
-        conn.execute("SELECT 1;", []).unwrap();
+        conn.execute("SELECT 1;", []).expect("failed to execute query");
     }
 
 }

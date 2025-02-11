@@ -16,7 +16,7 @@ mod tests {
     #[test]
     fn test_cli_create_no_repo() {
         let temp_dir = get_test_dir();
-        let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd.current_dir(temp_dir.as_path())
             .arg("create")
             .arg("test_bucket")
@@ -28,7 +28,7 @@ mod tests {
     #[test]
     fn test_cli_create() {
         let temp_dir = get_test_dir();
-        let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd.current_dir(temp_dir.as_path())
             .arg("init")
             .arg("test_repo")
@@ -41,7 +41,7 @@ mod tests {
         assert!(repo_dir.exists());
         assert!(repo_dir.is_dir());
 
-        let mut cmd = assert_cmd::Command::cargo_bin("buckets").unwrap();
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd.current_dir(repo_dir.as_path())
             .arg("create")
             .arg("test_bucket")
@@ -56,7 +56,7 @@ mod tests {
 
         // Check if added to database
         let db_path = repo_dir.join(".buckets").join("buckets.db");
-        let connection = Connection::open(db_path).unwrap();
+        let connection = Connection::open(db_path).expect("Failed to open database");
 
         match connection.prepare("SELECT * FROM buckets WHERE name = 'test_bucket'") {
             Ok(mut statement) => {

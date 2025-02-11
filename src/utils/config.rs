@@ -27,7 +27,7 @@ impl RepositoryConfig {
         file.read_to_string(&mut toml_string)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
 
-        Ok(toml::from_str(&toml_string).unwrap())
+        Ok(toml::from_str(&toml_string).expect("Failed to parse toml string"))
     }
 }
 
@@ -53,15 +53,15 @@ mod tests {
 
     #[test]
     fn test_from_file() {
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempdir().expect("Failed to create temporary directory");
         let buckets_dir = temp_dir.path().join(".buckets");
-        fs::create_dir(&buckets_dir).unwrap();
+        fs::create_dir(&buckets_dir).expect("Failed to create .buckets directory");
 
         // Create and write to the file
-        create_config_file(&buckets_dir.as_path()).unwrap();
+        create_config_file(&buckets_dir.as_path()).expect("Failed to create config file");
 
         // Read the file
-        let config = RepositoryConfig::from_file(temp_dir.path().to_path_buf()).unwrap();
+        let config = RepositoryConfig::from_file(temp_dir.path().to_path_buf()).expect("Failed to read config file");
 
         // Assertions
         assert_eq!(config.ip_check, "8.8.8.8");

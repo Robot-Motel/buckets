@@ -18,8 +18,8 @@ pub fn execute(create_command: &CreateCommand) -> Result<(), BucketError> {
     let bucket_path = CURRENT_DIR.with(|dir| dir.join(&bucket_name));
     std::fs::create_dir_all(&bucket_path.join(".b").join("storage"))?;
 
-    let buckets_repo_path = find_directory_in_parents(&bucket_path, ".buckets").unwrap();
-    let relative_path = match bucket_path.strip_prefix(&buckets_repo_path.parent().unwrap()) {
+    let buckets_repo_path = find_directory_in_parents(&bucket_path, ".buckets").ok_or_else(|| NotInBucketsRepo)?;
+    let relative_path = match bucket_path.strip_prefix(&buckets_repo_path.parent().ok_or_else(|| NotInBucketsRepo)?) {
         Ok(x) => x,
         Err(_) => {
             return Err(BucketError::IoError(std::io::Error::new(
@@ -36,7 +36,7 @@ pub fn execute(create_command: &CreateCommand) -> Result<(), BucketError> {
     match connection
         .execute(
             "INSERT INTO buckets (id, name, path, created_at) VALUES (gen_random_uuid(), ?1, ?2, ?3)",
-            &[&bucket_name, relative_path.to_str().unwrap(), &timestamp],
+            [bucket_name, relative_path.to_str().expect("invalid string"), &timestamp],
         )
         .map_err(|e| {
             std::io::Error::new(
@@ -61,7 +61,7 @@ pub fn execute(create_command: &CreateCommand) -> Result<(), BucketError> {
         })?;
 
     let bucket_id_str: String = stmt
-        .query_row(&[&bucket_name, relative_path.to_str().unwrap()], |row| {
+        .query_row([bucket_name, relative_path.to_str().expect("invalid string")], |row| {
             row.get(0)
         })
         .map_err(|e| {
@@ -71,7 +71,12 @@ pub fn execute(create_command: &CreateCommand) -> Result<(), BucketError> {
             )
         })?;
 
-    let bucket_id = Uuid::parse_str(&bucket_id_str).unwrap();
+    let bucket_id = Uuid::parse_str(&bucket_id_str).map_err(|e| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Error parsing UUID: {}", e),
+        )
+    })?;
     let bucket = Bucket::default(bucket_id, bucket_name, &relative_path);
     bucket.write_bucket_info();
 

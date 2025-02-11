@@ -67,9 +67,8 @@ impl BucketTrait for Bucket {
     }
 
     fn write_bucket_info(&self) {
-        let mut file = File::create(self.relative_bucket_path.join(".b").join("info")).unwrap();
-        file.write_fmt(format_args!("{}", to_string(self).unwrap()))
-            .unwrap();
+        let mut file = File::create(self.relative_bucket_path.join(".b").join("info")).expect("Failed to create bucket info file");
+        file.write_fmt(format_args!("{}", to_string(self).expect("Failed to serialize bucket info"))).expect("Failed to write bucket info");
     }
 
     fn is_valid_bucket(dir_path: &Path) -> bool {
@@ -154,10 +153,10 @@ impl BucketTrait for Bucket {
             let hex_string: String = row.get(2)?;
 
             files.push(CommittedFile {
-                id: Uuid::parse_str(&uuid_string).unwrap(),
+                id: Uuid::parse_str(&uuid_string).map_err(|e| BucketError::InvalidData(e.to_string()))?,
                 name: row.get(1)?,
-                hash: Hash::from_hex(&hex_string).unwrap(),
-                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                hash: Hash::from_hex(&hex_string).map_err(|e| BucketError::InvalidData(e.to_string()))?,
+                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("Failed to create hash"),
                 status: CommitStatus::Committed,
             });
         }
@@ -179,7 +178,7 @@ pub fn read_bucket_info(path: &PathBuf) -> Result<Bucket, std::io::Error> {
             e.kind(),
             format!(
                 "Failed to open {} file: {}",
-                &info_path.as_os_str().to_str().unwrap(),
+                &info_path.as_os_str().to_str().expect("Failed to convert path to string"),
                 e
             ),
         )

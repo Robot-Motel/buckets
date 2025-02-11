@@ -84,81 +84,79 @@ impl PartialEq for CommitStatus {
 impl Commit {
     #[allow(dead_code)]
     pub fn compare(&self, other_commit: &Commit) -> Option<Vec<CommittedFile>> {
-        match other_commit {
-            Commit {
+        let Commit {
                 bucket: _,
                 files: _,
                 timestamp: _,
                 previous: _,
                 next: _,
-            } => {
-                let mut status_all_files = Vec::new();
+            } = other_commit;
+        {
+            let mut status_all_files = Vec::new();
 
-                // First check if existing files are the same
-                for file in self.files.iter() {
-                    for other_file in other_commit.files.iter() {
-                        if file.name == other_file.name && file.hash != other_file.hash {
-                            status_all_files.push(CommittedFile {
-                                id: file.id,
-                                name: file.name.clone(),
-                                hash: file.hash.clone(),
-                                previous_hash: other_file.hash.clone(),
-                                status: CommitStatus::Modified,
-                            });
-                        } else if file.name == other_file.name && file.hash == other_file.hash {
-                            status_all_files.push(CommittedFile {
-                                id: file.id,
-                                name: file.name.clone(),
-                                hash: other_file.hash.clone(),
-                                previous_hash: file.hash.clone(),
-                                status: CommitStatus::Committed,
-                            });
-                        }
+            // First check if existing files are the same
+            for file in self.files.iter() {
+                for other_file in other_commit.files.iter() {
+                    if file.name == other_file.name && file.hash != other_file.hash {
+                        status_all_files.push(CommittedFile {
+                            id: file.id,
+                            name: file.name.clone(),
+                            hash: file.hash.clone(),
+                            previous_hash: other_file.hash.clone(),
+                            status: CommitStatus::Modified,
+                        });
+                    } else if file.name == other_file.name && file.hash == other_file.hash {
+                        status_all_files.push(CommittedFile {
+                            id: file.id,
+                            name: file.name.clone(),
+                            hash: other_file.hash.clone(),
+                            previous_hash: file.hash.clone(),
+                            status: CommitStatus::Committed,
+                        });
                     }
                 }
+            }
 
-                // Add files which haven't changed
-                for file in self.files.iter() {
+            // Add files which haven't changed
+            for file in self.files.iter() {
+                let mut found = false;
+                for other_file in other_commit.files.iter() {
+                    if file.name == other_file.name {
+                        found = true;
+                    }
+                }
+                if !found {
+                    status_all_files.push(CommittedFile {
+                        id: file.id,
+                        name: file.name.clone(),
+                        hash: file.hash.clone(),
+                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("Failed to create hash"),
+                        status: CommitStatus::New,
+                    });
+                }
+            }
+
+            // Check if any files were deleted
+            if status_all_files.len() < other_commit.files.len() {
+                for other_file in other_commit.files.iter() {
                     let mut found = false;
-                    for other_file in other_commit.files.iter() {
+                    for file in self.files.iter() {
                         if file.name == other_file.name {
                             found = true;
                         }
                     }
                     if !found {
                         status_all_files.push(CommittedFile {
-                            id: file.id,
-                            name: file.name.clone(),
-                            hash: file.hash.clone(),
-                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
-                            status: CommitStatus::New,
+                            id: other_file.id,
+                            name: other_file.name.clone(),
+                            hash: other_file.hash.clone(),
+                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("Failed to create hash"),
+                            status: CommitStatus::Deleted,
                         });
                     }
                 }
-
-                // Check if any files were deleted
-                if status_all_files.len() < other_commit.files.len() {
-                    for other_file in other_commit.files.iter() {
-                        let mut found = false;
-                        for file in self.files.iter() {
-                            if file.name == other_file.name {
-                                found = true;
-                            }
-                        }
-                        if !found {
-                            status_all_files.push(CommittedFile {
-                                id: other_file.id,
-                                name: other_file.name.clone(),
-                                hash: other_file.hash.clone(),
-                                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
-                                status: CommitStatus::Deleted,
-                            });
-                        }
-                    }
-                }
-                return Some(status_all_files);
             }
-
+            Some(status_all_files)
         }
 
     }
