@@ -59,7 +59,7 @@ pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
             // Compare the current commit with the previous commit
             if let Some(changes) = current_commit.compare(&previous_commit) {
                 // Process the files that have changed
-                process_files(bucket.id, &bucket.get_full_bucket_path(), &changes, &commit_command.message)?;
+                process_files(bucket.id, &bucket.get_full_bucket_path()?, &changes, &commit_command.message)?;
             } else {
                 // if there are no difference with previous commit cancel commit
                 println!("No changes detected. Commit cancelled.");

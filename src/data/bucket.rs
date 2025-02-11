@@ -26,7 +26,7 @@ pub trait BucketTrait {
     fn write_bucket_info(&self);
     fn is_valid_bucket(dir_path: &Path) -> bool;
     fn find_bucket(dir_path: &Path) -> Option<PathBuf>;
-    fn get_full_bucket_path(&self) -> PathBuf;
+    fn get_full_bucket_path(&self) -> Result<PathBuf, BucketError>;
     #[allow(dead_code)]
     fn list_files_with_metadata_in_bucket(&self) -> io::Result<Commit>;
     #[allow(dead_code)]
@@ -87,16 +87,22 @@ impl BucketTrait for Bucket {
         }
     }
 
-    fn get_full_bucket_path(&self) -> PathBuf {
-        let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("/"));
-        let full_bucket_path = find_bucket_repo(&current_dir.as_path()).unwrap().parent().unwrap().join(&self.relative_bucket_path);
-        full_bucket_path
+    fn get_full_bucket_path(&self) -> Result<PathBuf, BucketError> {
+        let current_dir = env::current_dir().map_err(BucketError::from)?;
+        let full_bucket_path = find_bucket_repo(&current_dir.as_path())
+            .ok_or(BucketError::NotInBucketsRepo)?
+            .parent()
+            .ok_or(BucketError::NotInBucketsRepo)?
+            .join(&self.relative_bucket_path);
+        Ok(full_bucket_path)
     }
 
     fn list_files_with_metadata_in_bucket(&self) -> io::Result<Commit> {
         let mut files = Vec::new();
 
-        for entry in find_files_excluding_top_level_b(self.get_full_bucket_path() .as_path()) {
+        for entry in find_files_excluding_top_level_b(self.get_full_bucket_path()
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?.
+            as_path()) {
             let path = entry.as_path();
 
             if path.is_file() {
@@ -107,7 +113,8 @@ impl BucketTrait for Bucket {
                             id: Default::default(),
                             name: path.to_string_lossy().into_owned(),
                             hash,
-                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
                             status: CommitStatus::Unknown,
                         });
                     }

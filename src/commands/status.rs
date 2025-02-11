@@ -40,7 +40,7 @@ pub fn execute(_status_command: &StatusCommand) -> Result<(), BucketError> {
 
 fn bucket_status(bucket: &Bucket) -> Result<(), BucketError> {
     // Read the bucket's metadata
-    let bucket = Bucket::from_meta_data(&bucket.get_full_bucket_path())?;
+    let bucket = Bucket::from_meta_data(&bucket.get_full_bucket_path()?)?;
     let bucket_files = bucket.list_files_with_metadata_in_bucket()?;
     if bucket_files.files.is_empty() {
         println!("No files in bucket");

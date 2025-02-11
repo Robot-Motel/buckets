@@ -38,34 +38,46 @@ fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), Buc
         return Err(BucketError::from(Error::new(ErrorKind::NotFound, "File not found.")));
     }
 
-    let bucket = Bucket::from_meta_data(&bucket_path)?;
+    let bucket = Bucket::from_meta_data(bucket_path)?;
 
     match load_last_commit(bucket.name) {
-            Ok(None) => {
-                Err(BucketError::from(Error::new(ErrorKind::NotFound, "No previous commit found.")))
-            }
-            Ok(Some(previous_commit)) => {
+        Ok(None) => Err(BucketError::from(Error::new(
+            ErrorKind::NotFound,
+            "No previous commit found.",
+        ))),
+        Ok(Some(previous_commit)) => {
+            let file_name = file
+                .to_str()
+                .ok_or_else(|| BucketError::from("Invalid UTF-8 path."))?; // Handle UTF-8 conversion error
 
-                let found_file = previous_commit.files.iter().find(|committed_file|
-                    committed_file.name == file.to_str().unwrap() && committed_file.hash == hash_file(file).unwrap());
-                match found_file {
-                    None => {
-                        Err(BucketError::from(Error::new(ErrorKind::NotFound, "File not found in previous commit.")))
-                    },
-                    Some(file_to_restore) => {
-                        restore_file(&bucket_path, file_to_restore)?;
-                        Ok(())
-                    }
-                }.expect("Failed to restore file.");
+            let file_hash = hash_file(file)?; // Properly propagate error
 
-                Ok(())
+            let found_file = previous_commit
+                .files
+                .iter()
+                .find(|committed_file| committed_file.name == file_name && committed_file.hash == file_hash);
+
+            match found_file {
+                None => Err(BucketError::from(Error::new(
+                    ErrorKind::NotFound,
+                    "File not found in previous commit.",
+                ))),
+                Some(file_to_restore) => {
+                    restore_file(bucket_path, file_to_restore)?; // Propagate any error from restore_file
+                    Ok(())
+                }
             }
-        _ => {
+        }
+        Err(_) => {
             error!("Failed to load previous commit.");
-            Err(BucketError::from(Error::new(ErrorKind::Other, "Failed to load previous commit.")))
+            Err(BucketError::from(Error::new(
+                ErrorKind::Other,
+                "Failed to load previous commit.",
+            )))
         }
     }
 }
+
 
 fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
     // Read the bucket's metadata
@@ -81,7 +93,7 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
             return Err(BucketError::from(Error::new(ErrorKind::NotFound, "No previous commit found.")));
         }
         Ok(Some(previous_commit)) => {
-            let changes = bucket_files.compare(&previous_commit).unwrap();
+            let changes = bucket_files.compare(&previous_commit).ok_or_else(|| BucketError::from(Error::new(ErrorKind::Other, "Failed to compare files.")))?;
 
             if changes
                 .iter()
@@ -95,7 +107,7 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
                 .iter()
                 .filter(|change| change.status == CommitStatus::Modified)
                 .for_each(|change| {
-                    restore_file(&bucket_path, change).unwrap();
+                    restore_file(&bucket_path, change).expect("Failed to restore file.");
                 });
         }
         Err(_) => {

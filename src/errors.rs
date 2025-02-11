@@ -1,14 +1,19 @@
-use std::fmt::{Debug, Display, Formatter};
 use std::io;
+use thiserror::Error;
 
+#[derive(Error, Debug)]
 pub enum BucketError {
-    IoError(io::Error),
-    DuckDB(duckdb::Error),
+    #[error("IO Error: {0}")]
+    IoError(#[from] io::Error),
+    #[error("Database Error: {0}")]
+    DuckDB(#[from] duckdb::Error),
+    #[error("Bucket already exists")]
     BucketAlreadyExists,
+    #[error("Repository {0} already exists")]
     RepoAlreadyExists(String),
+    #[error("Not in a buckets repository")]
     NotInBucketsRepo,
-    // #[allow(dead_code)]
-    // InBucketRepo,
+    #[error("Not a valid bucket")]
     NotAValidBucket,
 }
 
@@ -26,44 +31,8 @@ impl BucketError {
     }
 }
 
-impl Display for BucketError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BucketError::IoError(e) => write!(f, "IO Error: {}", e),
-            BucketError::DuckDB(e) => write!(f, "Database Error: {}", e),
-            BucketError::BucketAlreadyExists => write!(f, "Bucket already exists"),
-            BucketError::RepoAlreadyExists(message) => write!(f, "Repository already exists {}", message),
-            BucketError::NotInBucketsRepo => write!(f, "Not in a buckets repository"),
-            // BucketError::InBucketRepo => write!(f, "Already in a bucket repository"),
-            BucketError::NotAValidBucket => write!(f, "Not a valid bucket"),
-        }
+impl From<&str> for BucketError {
+    fn from(error: &str) -> Self {
+        BucketError::IoError(io::Error::new(io::ErrorKind::Other, error))
     }
-}
-
-impl Debug for BucketError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BucketError::IoError(e) => f.debug_tuple("IoError").field(e).finish(),
-            BucketError::DuckDB(e) => f.debug_tuple("DuckDB").field(e).finish(),
-            BucketError::BucketAlreadyExists => f.debug_tuple("BucketAlreadyExists").finish(),
-            BucketError::NotInBucketsRepo => f.debug_tuple("NotInBucketRepo").finish(),
-            // BucketError::InBucketRepo => f.debug_tuple("InBucketRepo").finish(),
-            BucketError::NotAValidBucket => f.debug_tuple("NotAValidBucket").finish(),
-            BucketError::RepoAlreadyExists(message) => f.debug_tuple("RepoAlreadyExists").field(message).finish(),
-        }
-    }
-}
-
-impl From<io::Error> for BucketError {
-    fn from(error: io::Error) -> Self {
-        BucketError::IoError(error)
-    }
-}
-
-impl From<duckdb::Error> for BucketError {
-    fn from(error: duckdb::Error) -> Self {
-        // BucketError::DuckDB(error)
-        BucketError::IoError(io::Error::new(io::ErrorKind::Other, error.to_string()))
-    }
-
 }
