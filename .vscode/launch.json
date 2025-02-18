@@ -1,0 +1,349 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'buckets'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=buckets",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "buckets",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'buckets'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=buckets",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "buckets",
+                    "kind": "bin",
+                    "color": "always"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'common'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=common",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "common",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_check'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_check",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_check",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_commit'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_commit",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_commit",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_create'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_create",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_create",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_expect'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_expect",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_expect",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_finalize'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_finalize",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_finalize",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_history'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_history",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_history",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_init'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_init",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_init",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_link'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_link",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_link",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_list'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_list",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_list",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_revert'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_revert",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_revert",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_rollback'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_rollback",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_rollback",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_stash'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_stash",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_stash",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_stats'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_stats",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_stats",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'test_cli_status'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=test_cli_status",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "test_cli_status",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug 'buckets history'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=buckets",
+                    "--package=buckets"
+                ],
+                "filter": {
+                    "name": "buckets",
+                    "kind": "bin"
+                }
+            },
+            "args": ["history"],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

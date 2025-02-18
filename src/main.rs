@@ -18,6 +18,7 @@ static ARGS: Lazy<CliArguments> = Lazy::new(|| {
     CliArguments::try_parse().unwrap_or_else(|error| {
         if error.kind() == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
             println!("Please provide a subcommand: {}", error);
+            std::process::exit(0); // Exit with success code after showing help
         }
         error.exit();
     })

@@ -99,6 +99,16 @@ Check if all expectations are met. If not, print what is missing.
 `bucket link [from bucket directory] [to bucket directory]`
 Create a one way link between two buckets
 
+### Development Setup
+
+When using VSCode for development:
+
+1. Copy the VSCode settings template to create your local settings:
+   ```bash
+   cp .vscode/settings.json.template .vscode/settings.json
+   ```
+
+2. Adjust the rust-analyzer.rustc settings in `.vscode/settings.json` to match your local toolchain.
 
 ## License
 
