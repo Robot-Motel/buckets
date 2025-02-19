@@ -46,7 +46,7 @@ pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
     // and create a blake3 hash for each file and add to current_commit
     let current_commit = list_files_with_metadata_in_bucket(bucket_path)?;
     if current_commit.files.is_empty() {
-        return Err(BucketError::from(Error::new(ErrorKind::NotFound, "No commitable files found in bucket."), ));
+        return Err(Error::new(ErrorKind::NotFound, "No commitable files found in bucket.").into());
     }
 
     // Load the previous commit, if it exists

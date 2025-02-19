@@ -57,66 +57,17 @@ pub fn create_config_file(location: &Path) -> Result<(), BucketError> {
     Ok(())
 }
 
-fn create_database(location: &Path) -> Result<(), duckdb::Error> {
+fn create_database(location: &Path) -> Result<(), BucketError> {
     let db_path = location.join("buckets.db");
-
-    // Not using the connection from the struct because it is in-memory and immutable
     let connection = Connection::open(db_path)?;
 
-    match connection.execute(
-        "CREATE TABLE buckets (
-            id UUID PRIMARY KEY,
-            name TEXT NOT NULL,
-            path TEXT NOT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )",
-        [],
-    ) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("Error creating 'buckets' table: {}", e);
-            return Err(e);
-        }
-    }
-
-    match connection.execute(
-        "CREATE TABLE commits (
-            id UUID PRIMARY KEY,
-            bucket_id UUID NOT NULL,
-            message TEXT NOT NULL,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (bucket_id) REFERENCES buckets (id)
-        )",
-        [],
-    ) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("Error creating 'commits' table: {}", e);
-            return Err(e);
-        }
-    }
-
-    match connection.execute(
-        "CREATE TABLE files (
-            id UUID PRIMARY KEY,
-            commit_id UUID NOT NULL,
-            file_path TEXT NOT NULL,
-            hash TEXT NOT NULL,
-            FOREIGN KEY (commit_id) REFERENCES commits (id),
-            UNIQUE (commit_id, file_path, hash)
-        )",
-        [],
-    ) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("Error creating 'files' table: {}", e);
-            return Err(e);
-        }
-    }
+    // The schema.sql file must be in the same directory as this source file
+    let schema = include_str!("../sql/schema.sql");
+    
+    connection.execute_batch(schema)?;
 
     Ok(())
 }
-
 
 fn checks(repo_name: &str) -> Result<(), BucketError> {
     let repo_path = CURRENT_DIR.with(|dir| dir.join(repo_name));
