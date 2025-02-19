@@ -21,9 +21,7 @@ pub enum Command {
     Check(CheckCommand),
     Link(LinkCommand),
     Finalize(FinalizeCommand),
-
-
-
+    Schema(SchemaCommand),
 }
 
 #[derive(Parser)]
@@ -135,6 +133,12 @@ pub struct LinkCommand {
 
 #[derive(Args)]
 pub struct FinalizeCommand {
+    #[clap(flatten)]
+    pub shared: SharedArguments,
+}
+
+#[derive(Args)]
+pub struct SchemaCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }

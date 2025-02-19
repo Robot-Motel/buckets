@@ -65,6 +65,7 @@ fn dispatch() -> Result<(), BucketError> {
         Command::Check(command) => commands::check::execute(command)?,
         Command::Link(command) => commands::link::execute(command)?,
         Command::Finalize(command) => commands::finalize::execute(command)?,
+        Command::Schema(command) => commands::schema::execute(command)?,
     }
 
     Ok(())

@@ -1,9 +1,0 @@
-{
-    "lldb.script": {
-        "lang.rust.toolchain": "stable-x86_64-pc-windows-gnu"
-    },
-    "testExplorer.onReload": "reset",
-    "testExplorer.onStart": "reset",
-    "testExplorer.sort": "byLocationWithSuitesFirst",
-    "testExplorer.useNativeTesting": false
-}

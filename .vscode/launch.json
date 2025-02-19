@@ -25,7 +25,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'buckets'",
+            "name": "Debug unit tests",
             "cargo": {
                 "args": [
                     "test",
@@ -343,6 +343,20 @@
                 }
             },
             "args": ["history"],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug all tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--package=buckets"
+                ]
+            },
+            "args": [],
             "cwd": "${workspaceFolder}"
         }
     ]

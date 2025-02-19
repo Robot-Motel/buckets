@@ -12,3 +12,4 @@ pub(crate) mod expect;
 pub(crate) mod check;
 pub(crate) mod link;
 pub(crate) mod finalize;
+pub mod schema;
