@@ -89,9 +89,9 @@ impl BucketTrait for Bucket {
     fn get_full_bucket_path(&self) -> Result<PathBuf, BucketError> {
         let current_dir = env::current_dir().map_err(BucketError::from)?;
         let full_bucket_path = find_bucket_repo(&current_dir.as_path())
-            .ok_or(BucketError::NotInBucketsRepo)?
+            .ok_or(BucketError::NotInRepo)?
             .parent()
-            .ok_or(BucketError::NotInBucketsRepo)?
+            .ok_or(BucketError::NotInRepo)?
             .join(&self.relative_bucket_path);
         Ok(full_bucket_path)
     }

@@ -92,7 +92,7 @@ pub fn connect_to_db() -> Result<Connection, BucketError> {
 
     let path = match find_directory_in_parents(&current_dir, ".buckets") {
         Some(path) => path.join("buckets.db"),
-        None => return Err(BucketError::NotInBucketsRepo),
+        None => return Err(BucketError::NotInRepo),
     };
 
     match Connection::open(path.as_path()) {

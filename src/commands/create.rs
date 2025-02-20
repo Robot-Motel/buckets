@@ -2,7 +2,6 @@ use chrono::Utc;
 use duckdb::Connection;
 use log::error;
 use uuid::Uuid;
-use BucketError::NotInBucketsRepo;
 use crate::args::CreateCommand;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
@@ -18,8 +17,8 @@ pub fn execute(create_command: &CreateCommand) -> Result<(), BucketError> {
     let bucket_path = CURRENT_DIR.with(|dir| dir.join(&bucket_name));
     std::fs::create_dir_all(&bucket_path.join(".b").join("storage"))?;
 
-    let buckets_repo_path = find_directory_in_parents(&bucket_path, ".buckets").ok_or_else(|| NotInBucketsRepo)?;
-    let relative_path = match bucket_path.strip_prefix(&buckets_repo_path.parent().ok_or_else(|| NotInBucketsRepo)?) {
+    let buckets_repo_path = find_directory_in_parents(&bucket_path, ".buckets").ok_or_else(|| BucketError::NotInRepo)?;
+    let relative_path = match bucket_path.strip_prefix(&buckets_repo_path.parent().ok_or_else(|| BucketError::NotInRepo)?) {
         Ok(x) => x,
         Err(_) => {
             return Err(BucketError::IoError(std::io::Error::new(
@@ -89,7 +88,7 @@ fn checks(bucket_name: &str) -> Result<(), BucketError> {
 
     // Check if in valid buckets repository
     if !checks::is_valid_bucket_repo(&current_dir) {
-        return Err(NotInBucketsRepo);
+        return Err(BucketError::NotInRepo);
     }
 
     if bucket_location.exists() {

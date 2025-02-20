@@ -11,7 +11,6 @@ use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::data::commit::{CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::errors::BucketError::NotInBucketsRepo;
 use crate::utils::checks;
 use crate::utils::utils::{find_bucket_path, hash_file};
 
@@ -19,7 +18,7 @@ pub fn execute(rollback_command: &RollbackCommand) -> Result<(), BucketError> {
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
     if !checks::is_valid_bucket_repo(&current_dir) {
-        return Err(NotInBucketsRepo);
+        return Err(BucketError::NotInRepo);
     }
 
     let _ = match find_bucket_path(&current_dir) {

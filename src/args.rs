@@ -35,7 +35,7 @@ pub struct CliArguments {
     pub command: Command,
 }
 
-#[derive(Args)]
+#[derive(Args, Default, Debug)]
 pub struct SharedArguments {
     #[clap(short, long)]
     pub verbose: bool,
@@ -95,7 +95,7 @@ pub struct StatusCommand {
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct HistoryCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,

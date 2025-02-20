@@ -14,7 +14,6 @@ use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::data::commit::{Commit, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::errors::BucketError::NotInBucketsRepo;
 use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
 use crate::utils::utils::{connect_to_db, find_bucket_path, find_files_excluding_top_level_b, hash_file};
@@ -24,7 +23,7 @@ pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
     if !checks::is_valid_bucket_repo(&current_dir) {
-        return Err(NotInBucketsRepo);
+        return Err(BucketError::NotInRepo);
     }
 
     let bucket_path = match find_bucket_path(&current_dir) {
