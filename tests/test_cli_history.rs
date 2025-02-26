@@ -15,15 +15,12 @@ mod acceptance_tests {
     /// # Expected output
     ///
     #[test]
-    fn test_cli_history() {
+    fn test_cli_history_one_commit() {
         // Setup repo with a commit
         let repo_dir = setup();
         let bucket_dir = repo_dir.join("test_bucket");
         
-        // Create and commit a file
-        let file_path = bucket_dir.join("test_file.txt");
-        let mut file = File::create(&file_path).expect("Failed to create file");
-        file.write_all(b"test content").expect("Failed to write to file");
+        create_test_file(&bucket_dir, "test_file.txt", "test content");
 
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd.current_dir(&bucket_dir)
@@ -40,6 +37,49 @@ mod acceptance_tests {
             .success()
             .stdout(predicate::str::contains("test commit message"))
             .stdout(predicate::str::contains("test_bucket"));
+    }
+
+    #[test]
+    fn test_cli_history_multiple_commits() {
+        // Setup repo with multiple commits
+        let repo_dir = setup();
+        let bucket_dir = repo_dir.join("test_bucket");
+
+        create_test_file(&bucket_dir, "test_file.txt", "test content");
+        create_test_file(&bucket_dir, "test_file2.txt", "test content 2");
+
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
+        cmd.current_dir(&bucket_dir)
+            .arg("commit")
+            .arg("test commit message 1")
+            .assert()
+            .success();
+
+        create_test_file(&bucket_dir, "test_file3.txt", "test content 3");
+
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
+        cmd.current_dir(&bucket_dir)
+            .arg("commit")
+            .arg("test commit message 2")
+            .assert()
+            .success();
+        
+        let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
+        cmd.current_dir(&bucket_dir)
+            .arg("history")
+            .assert()
+            .success()
+            .stdout(predicate::str::contains("test commit message 1"))
+            .stdout(predicate::str::contains("test commit message 2"));
+
+        
+    }
+
+
+    fn create_test_file(dir: &std::path::Path, filename: &str, content: &str) {
+        let file_path = dir.join(filename);
+        let mut file = File::create(&file_path).expect("Failed to create file");
+        file.write_all(content.as_bytes()).expect("Failed to write to file");
     }
 
     fn setup() -> std::path::PathBuf {
