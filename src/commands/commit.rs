@@ -8,7 +8,6 @@ use duckdb::params;
 use log::{debug, error};
 use uuid::Uuid;
 use zstd::Encoder;
-use zstd::stream::copy_encode;
 use crate::args::CommitCommand;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
@@ -129,13 +128,13 @@ fn insert_commit_into_db(bucket_id: Uuid, message: &String) -> Result<String, Bu
 fn compress_and_store_file(input_path: &str, output_path: &Path, compression_level: i32) -> io::Result<()> {
     let input_file = File::open(input_path)?;
     let output_file = File::create(output_path)?;
-    let reader = BufReader::new(input_file);
-    let writer = BufWriter::new(output_file);
 
-    // Compress the file data and write it to the output file
+    let mut reader = BufReader::new(input_file);
+    let writer = BufWriter::new(output_file);
     let mut encoder = Encoder::new(writer, compression_level)?;
-    copy_encode(reader, &mut encoder, compression_level)?;
-    encoder.finish()?;
+
+    std::io::copy(&mut reader, &mut encoder)?;
+    encoder.finish()?; // Finalize the compression
 
     Ok(())
 }
@@ -283,4 +282,39 @@ mod tests {
 
     }
 
+    #[test]
+    fn test_compress_and_store_file() {
+        // Create a temporary directory for test files
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        // let temp_dir: PathBuf = "E:\\Projects\\buckets".into();
+
+        // Create original content and source file
+        let original_content = b"This is test content for compression and storage";
+        let source_path = temp_dir.path().join("source.txt");
+        {
+            let mut source_file = File::create(&source_path).expect("Failed to create source file");
+            source_file.write_all(original_content).expect("Failed to write to source file");
+        }
+        
+        // Define the compressed output path
+        let compressed_path = temp_dir.path().join("compressed.zst");
+        
+        // Call the function we're testing
+        crate::commands::commit::compress_and_store_file(
+            source_path.to_str().expect("Invalid path"), 
+            &compressed_path, 
+            0
+        ).expect("Failed to compress file");
+        
+        // Verify compressed file exists
+        assert!(compressed_path.exists(), "Compressed file wasn't created");
+        
+        // Decompress the file to verify content
+        let decompressed_content = zstd::decode_all(
+            std::fs::read(&compressed_path).expect("Failed to read compressed file").as_slice()
+        ).expect("Failed to decompress");
+        
+        // Compare content
+        assert_eq!(decompressed_content, original_content, "Decompressed content doesn't match original");
+    }
 }

@@ -1,7 +1,7 @@
 pub(crate) mod init;
 pub(crate) mod create;
 pub(crate) mod commit;
-pub(crate) mod revert;
+pub(crate) mod restore;
 pub(crate) mod rollback;
 pub(crate) mod stash;
 pub(crate) mod status;

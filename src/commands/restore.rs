@@ -1,0 +1,192 @@
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::path::PathBuf;
+use log::{debug, error};
+use crate::args::RestoreCommand;
+use crate::CURRENT_DIR;
+use crate::data::bucket::{Bucket, BucketTrait};
+use crate::errors::BucketError;
+use crate::utils::checks;
+use crate::utils::utils::{connect_to_db, find_bucket_path};
+
+pub fn execute(command: &RestoreCommand) -> Result<(), BucketError> {
+    let current_dir = CURRENT_DIR.with(|dir| dir.clone());
+
+    if !checks::is_valid_bucket_repo(&current_dir) {
+        return Err(BucketError::NotInRepo);
+    }
+
+    let bucket_path = match find_bucket_path(&current_dir) {
+        Some(path) => path,
+        None => return Err(BucketError::NotAValidBucket),
+    };
+
+    let bucket = Bucket::from_meta_data(&current_dir)?;
+
+    // Get the file's hash from the last commit
+    let connection = connect_to_db()?;
+    let mut stmt = connection.prepare(
+        "SELECT f.hash 
+        FROM files f
+        JOIN commits c ON f.commit_id = c.id
+        WHERE f.file_path = ?1
+        AND c.created_at = (
+            SELECT MAX(created_at) 
+            FROM commits 
+            WHERE bucket_id = ?2
+        )"
+    )?;
+    let file_path = command.file.clone();
+    let relative_path = PathBuf::from(&file_path)
+        .strip_prefix(&bucket_path)
+        .unwrap_or(&PathBuf::from(&file_path))
+        .to_string_lossy()
+        .to_string();
+    let rows = stmt.query_map([&relative_path, &bucket.id.to_string()], |row| {
+        row.get::<_, String>(0)
+    })?;
+
+    let hash = match rows.last() {
+        Some(Ok(hash)) => hash,
+        _ => return Err(BucketError::FileNotFound(file_path)),
+    };
+
+    // Construct paths
+    let storage_path = bucket_path.join(".b").join("storage").join(&hash);
+    let target_path = PathBuf::from(&file_path);
+
+    debug!("Restoring {} from {}", target_path.display(), storage_path.display());
+
+    // Decompress and copy the file from storage
+    decompress_and_restore_file(&storage_path, &target_path)
+        .map_err(|e| {
+            error!("Failed to restore file: {}", e);
+            BucketError::from(e)
+        })?;
+
+    println!("Restored {}", file_path);
+    Ok(())
+}
+
+fn decompress_and_restore_file(storage_path: &PathBuf, target_path: &PathBuf) -> std::io::Result<()> {
+    // Create parent directories if they don't exist
+    if let Some(parent) = target_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    
+    // Open the compressed file
+    let input_file = File::open(storage_path)?;
+    let reader = BufReader::new(input_file);
+    
+    // Create the output file
+    let output_file = File::create(target_path)?;
+    let writer = BufWriter::new(output_file);
+    
+    // Create a zstd decoder
+    let mut decoder = zstd::Decoder::new(reader)?;
+    
+    // Copy data from decoder to output
+    std::io::copy(&mut decoder, &mut BufWriter::new(writer))?;
+    
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{env, fs};
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    fn test_restore_command() {
+        // Setup test environment
+        let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
+        cmd1.current_dir(temp_dir.as_path())
+            .arg("init")
+            .arg("test_repo")
+            .assert()
+            .success();
+
+        let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
+        let repo_dir = temp_dir.as_path().join("test_repo");
+        cmd2.current_dir(repo_dir.as_path())
+            .arg("create")
+            .arg("test_bucket")
+            .assert()
+            .success();
+
+        let bucket_dir = repo_dir.join("test_bucket");
+        let file_path = bucket_dir.join("test_file.txt");
+        let mut file = File::create(&file_path).expect("invalid file");
+        let original_content = b"original content";
+        file.write_all(original_content).expect("invalid write");
+        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
+        cmd3.current_dir(bucket_dir.as_path())
+            .arg("commit")
+            .arg("test message")
+            .assert()
+            .success();
+
+        // Modify the file
+        let modified_content = b"modified content";
+        let mut file = File::create(&file_path).unwrap();
+        file.write_all(modified_content).unwrap();
+
+        // Change to bucket directory
+        env::set_current_dir(&bucket_dir).expect("invalid directory");
+
+        // Restore the file
+        let restore_cmd = RestoreCommand {
+            file: file_path.to_str().unwrap().to_string(),
+            shared: Default::default(),
+        };
+        execute(&restore_cmd).unwrap();
+
+        // Verify the file was restored using binary comparison
+        let restored_content = fs::read(&file_path).expect("invalid read");
+        assert_eq!(restored_content, original_content);
+    }
+
+    #[test]
+    fn test_decompress_and_restore_file() {
+        // Create a temporary directory for test files
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        
+        // Create original content
+        let original_content = b"This is test content for compression and restoration";
+        
+        // Create source file path
+        let source_path = temp_dir.path().join("source.txt");
+        
+        // Write original content to source file
+        std::fs::write(&source_path, original_content).expect("Failed to write source file");
+        
+        // Create compressed file path
+        let compressed_path = temp_dir.path().join("compressed.zst");
+        
+        // Compress the file using zstd
+        let input_file = File::open(&source_path).expect("Failed to open source file");
+        let output_file = File::create(&compressed_path).expect("Failed to create compressed file");
+        let reader = BufReader::new(input_file);
+        let writer = BufWriter::new(output_file);
+        let mut encoder = zstd::Encoder::new(writer, 0).expect("Failed to create encoder");
+        std::io::copy(&mut BufReader::new(reader), &mut encoder).expect("Failed to compress");
+        encoder.finish().expect("Failed to finish compression");
+        
+        // Create restored file path
+        let restored_path = temp_dir.path().join("restored.txt");
+        
+        // Call the function we're testing
+        decompress_and_restore_file(
+            &compressed_path, 
+            &restored_path
+        ).expect("Failed to decompress and restore file");
+        
+        // Read the restored content
+        let restored_content = std::fs::read(&restored_path).expect("Failed to read restored file");
+        
+        // Compare content
+        assert_eq!(restored_content, original_content, "Restored content doesn't match original");
+    }
+}

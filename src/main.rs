@@ -52,7 +52,7 @@ fn dispatch() -> Result<(), BucketError> {
         Command::Init(command) => commands::init::execute(command)?,
         Command::Create(command) => commands::create::execute(command)?,
         Command::Commit(command) => commands::commit::execute(command)?,
-        Command::Revert(command) => commands::revert::execute(command)?,
+        Command::Revert(command) => commands::restore::execute(command)?,
         Command::Rollback(command) => commands::rollback::execute(command)?,
         Command::Stash(command) => commands::stash::execute(command)?,
         // Informational commands
