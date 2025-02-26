@@ -218,6 +218,7 @@ mod tests {
     use std::io::Write;
     use std::str::FromStr;
     use blake3::Hash;
+    use log::error;
     use tempfile::tempdir;
     use uuid::Uuid;
     use crate::commands::commit::process_files;
@@ -271,8 +272,14 @@ mod tests {
         // change to bucket directory
         env::set_current_dir(&bucket_dir).expect("invalid directory");
 
-        let result = process_files(bucket.id, &bucket_dir, &[committed_file], &commit_message);
-        assert!(result.is_ok());
+        let result = process_files(bucket.id, &bucket_dir, &[committed_file], &commit_message).map_err(
+            |e| {
+                error!("Error processing files: {}", e);
+                e
+            }
+        );
+
+        assert!(&result.is_ok());
 
     }
 
