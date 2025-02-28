@@ -286,7 +286,6 @@ mod tests {
     fn test_compress_and_store_file() {
         // Create a temporary directory for test files
         let temp_dir = tempdir().expect("Failed to create temp directory");
-        // let temp_dir: PathBuf = "E:\\Projects\\buckets".into();
 
         // Create original content and source file
         let original_content = b"This is test content for compression and storage";
@@ -309,10 +308,11 @@ mod tests {
         // Verify compressed file exists
         assert!(compressed_path.exists(), "Compressed file wasn't created");
         
-        // Decompress the file to verify content
-        let decompressed_content = zstd::decode_all(
-            std::fs::read(&compressed_path).expect("Failed to read compressed file").as_slice()
-        ).expect("Failed to decompress");
+        // Decompress the file using a proper Decoder
+        let compressed_file = File::open(&compressed_path).expect("Failed to open compressed file");
+        let mut decoder = zstd::Decoder::new(compressed_file).expect("Failed to create decoder");
+        let mut decompressed_content = Vec::new();
+        std::io::copy(&mut decoder, &mut decompressed_content).expect("Failed to decompress");
         
         // Compare content
         assert_eq!(decompressed_content, original_content, "Decompressed content doesn't match original");
