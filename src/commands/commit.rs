@@ -75,9 +75,13 @@ fn process_files(bucket_id: Uuid, bucket_path: &PathBuf, files: &[CommittedFile]
         // Insert the file into the database
         insert_file_into_db(&commit_id, &file.name, &file.hash.to_string())?;
 
-        // TODO: Replace unwrap with proper error handling
         // Compress and store the file
-        compress_and_store_file(&file.name, output.as_path(), 0)?;
+        compress_and_store_file(&file.name, output.as_path(), 0).map_err(
+            |e| {
+                error!("Error compressing and storing file: {}", e);
+                e
+            }
+        )?;
     }
     Ok(())
 }
@@ -264,7 +268,12 @@ mod tests {
             }
         );
 
-        assert!(&result.is_ok());
+        let result1 = result.map_err(|e| {
+            error!("Error processing files: {}", e);
+            e
+        });
+
+        assert!(result1.is_ok());
 
     }
 
