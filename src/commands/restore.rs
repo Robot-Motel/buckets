@@ -78,26 +78,33 @@ fn decompress_and_restore_file(storage_path: &PathBuf, target_path: &PathBuf) ->
     let input_file = File::open(storage_path)?;
     let reader = BufReader::new(input_file);
     
+    // Delete the target file if it exists
+    if target_path.exists() {
+        std::fs::remove_file(target_path)?;
+    }
+
     // Create the output file
     let output_file = File::create(target_path)?;
     let writer = BufWriter::new(output_file);
     
     // Create a zstd decoder
     let mut decoder = zstd::Decoder::new(reader)?;
-    
-    // Copy data from decoder to output
+
+    // Copy data from decoder to output 
     std::io::copy(&mut decoder, &mut BufWriter::new(writer))?;
-    
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::commands::commit::compress_and_store_file;
+
     use super::*;
     use std::{env, fs};
     use std::io::Write;
     use tempfile::tempdir;
 
+    #[test]
     fn test_restore_command() {
         // Setup test environment
         let temp_dir = tempdir().expect("invalid temp dir").into_path();
@@ -121,6 +128,8 @@ mod tests {
         let mut file = File::create(&file_path).expect("invalid file");
         let original_content = b"original content";
         file.write_all(original_content).expect("invalid write");
+
+
         let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd3.current_dir(bucket_dir.as_path())
             .arg("commit")
@@ -154,7 +163,7 @@ mod tests {
         let temp_dir = tempdir().expect("Failed to create temp directory");
         
         // Create original content
-        let original_content = b"This is test content for compression and restoration";
+        let original_content = b"original content";
         
         // Create source file path
         let source_path = temp_dir.path().join("source.txt");
@@ -164,15 +173,9 @@ mod tests {
         
         // Create compressed file path
         let compressed_path = temp_dir.path().join("compressed.zst");
-        
-        // Compress the file using zstd
-        let input_file = File::open(&source_path).expect("Failed to open source file");
-        let output_file = File::create(&compressed_path).expect("Failed to create compressed file");
-        let reader = BufReader::new(input_file);
-        let writer = BufWriter::new(output_file);
-        let mut encoder = zstd::Encoder::new(writer, 0).expect("Failed to create encoder");
-        std::io::copy(&mut BufReader::new(reader), &mut encoder).expect("Failed to compress");
-        encoder.finish().expect("Failed to finish compression");
+
+        // Compress and store the file
+        compress_and_store_file(&source_path.to_str().unwrap(), &compressed_path, 0).expect("Failed to compress and store file");
         
         // Create restored file path
         let restored_path = temp_dir.path().join("restored.txt");

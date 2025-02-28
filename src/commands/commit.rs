@@ -125,7 +125,7 @@ fn insert_commit_into_db(bucket_id: Uuid, message: &String) -> Result<String, Bu
     }
 }
 
-fn compress_and_store_file(input_path: &str, output_path: &Path, compression_level: i32) -> io::Result<()> {
+pub fn compress_and_store_file(input_path: &str, output_path: &Path, compression_level: i32) -> io::Result<()> {
     let input_file = File::open(input_path)?;
     let output_file = File::create(output_path)?;
 
@@ -297,7 +297,7 @@ mod tests {
         }
         
         // Define the compressed output path
-        let compressed_path = temp_dir.path().join("compressed.zst");
+        let compressed_path = temp_dir.path().join("1c4fc261196bfcd70efd6d5217a167d86c24cd465f144f15cd41ac336c1106e3");
         
         // Call the function we're testing
         crate::commands::commit::compress_and_store_file(
