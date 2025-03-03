@@ -9,40 +9,26 @@ use log::{debug, error};
 use uuid::Uuid;
 use zstd::Encoder;
 use crate::args::CommitCommand;
-use crate::CURRENT_DIR;
-use crate::data::bucket::{Bucket, BucketTrait};
+use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file};
+use crate::world::{self, World};
+use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::utils::checks;
-use crate::utils::config::RepositoryConfig;
-use crate::utils::utils::{connect_to_db, find_bucket_path, find_files_excluding_top_level_b, hash_file};
 
 pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
 
-    let current_dir = CURRENT_DIR.with(|dir| dir.clone());
-
-    if !checks::is_valid_bucket_repo(&current_dir) {
-        return Err(BucketError::NotInRepo);
-    }
-
-    let bucket_path = match find_bucket_path(&current_dir) {
-        Some(path) => path,
-        None => return Err(BucketError::NotAValidBucket),
+    let world = World::new(&commit_command.shared)?;
+    
+    let bucket = match &world.bucket {
+        Some(bucket) => bucket,
+        None => {
+            return Err(BucketError::NotInBucket)
+        },
     };
-
-    let bucket = match Bucket::from_meta_data(&current_dir) {
-        Ok(bucket) => bucket,
-        Err(e) => {
-            error!("Error reading bucket info: {}", e);
-            return Err(e);
-        }
-    };
-
-    let _repo_config = RepositoryConfig::from_file(env::current_dir().expect("invalid directory"))?;
 
     // create a list of each file in the bucket directory, recursively
     // and create a blake3 hash for each file and add to current_commit
-    let current_commit = list_files_with_metadata_in_bucket(bucket_path)?;
+    let current_commit = list_files_with_metadata_in_bucket(bucket.get_full_bucket_path()?)?;
     if current_commit.files.is_empty() {
         return Err(Error::new(ErrorKind::NotFound, "No commitable files found in bucket.").into());
     }

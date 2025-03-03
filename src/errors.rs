@@ -13,6 +13,8 @@ pub enum BucketError {
     RepoAlreadyExists(String),
     #[error("Not in a buckets repository")]
     NotInRepo,
+    #[error("Not in a bucket")]
+    NotInBucket,
     #[error("Not a valid bucket")]
     NotAValidBucket,
     #[error("Invalid data {0}")]
@@ -31,6 +33,7 @@ impl BucketError {
             BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
             BucketError::RepoAlreadyExists(message) => format!("Repository {} already exists", message),
             BucketError::NotInRepo => "Not in a buckets repository".to_string(),
+            BucketError::NotInBucket => "Not in a bucket".to_string(),
             // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
             BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
             BucketError::InvalidData(message) => format!("Invalid data {}", message),

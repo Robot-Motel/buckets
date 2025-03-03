@@ -4,6 +4,7 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 use once_cell::sync::Lazy;
+use world::World;
 use crate::args::{CliArguments, Command};
 use crate::errors::BucketError;
 
@@ -13,6 +14,7 @@ mod errors;
 mod utils;
 mod config;
 mod data;
+mod world;
 
 static ARGS: Lazy<CliArguments> = Lazy::new(|| {
     CliArguments::try_parse().unwrap_or_else(|error| {
@@ -47,6 +49,7 @@ fn main() -> ExitCode {
 }
 
 fn dispatch() -> Result<(), BucketError> {
+
     match &ARGS.command {
         // Commands that modify the repository
         Command::Init(command) => commands::init::execute(command)?,
