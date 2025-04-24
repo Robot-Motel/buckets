@@ -14,7 +14,7 @@ mod tests {
     ///
     /// # Expected output
     ///
-    // #[test]
+    #[test]
     fn test_cli_revert() {
         let temp_dir = tempdir().expect("invalid temp dir").into_path();
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");

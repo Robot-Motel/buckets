@@ -4,7 +4,6 @@ use std::process::ExitCode;
 use clap::error::ErrorKind;
 use clap::Parser;
 use once_cell::sync::Lazy;
-use world::World;
 use crate::args::{CliArguments, Command};
 use crate::errors::BucketError;
 

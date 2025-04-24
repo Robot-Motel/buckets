@@ -1,4 +1,4 @@
-use std::{env, io};
+use std::io;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Error, ErrorKind};
 use std::path::{Path, PathBuf};
@@ -10,7 +10,7 @@ use uuid::Uuid;
 use zstd::Encoder;
 use crate::args::CommitCommand;
 use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file};
-use crate::world::{self, World};
+use crate::world::{World};
 use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
@@ -268,13 +268,12 @@ mod tests {
             }
         );
 
-        let result1 = result.map_err(|e| {
-            error!("Error processing files: {}", e);
-            e
-        });
-
-        assert!(result1.is_ok());
-
+        match result {
+            Ok(_) => (),
+            Err(e) => {
+                panic!("Error processing files: {}", e);
+            }
+        }
     }
 
     #[test]

@@ -38,7 +38,7 @@ impl World {
 
         let bucket = match Bucket::from_meta_data(&work_dir) {
             Ok(bucket) => Some(bucket),
-            Err(e) => None,
+            Err(_e) => None,
         };
 
         let verbose = args.verbose;
