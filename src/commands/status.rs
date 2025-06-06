@@ -11,7 +11,7 @@ use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
 use crate::utils::utils::{find_bucket_path, find_directory_in_parents};
 
-pub fn execute(_status_command: &StatusCommand) -> Result<(), BucketError> {
+pub fn execute(_status_command: StatusCommand) -> Result<(), BucketError> {
 
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 

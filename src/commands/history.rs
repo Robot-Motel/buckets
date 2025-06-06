@@ -32,7 +32,7 @@ impl CommitRecord {
     }
 }
 
-pub fn execute(command: &HistoryCommand) -> Result<(), BucketError> {
+pub fn execute(command: HistoryCommand) -> Result<(), BucketError> {
     let x = command;
     println!("History command: {:?}", x);
     
@@ -185,7 +185,7 @@ mod tests {
         let history_cmd = HistoryCommand {
             shared: Default::default(),
         };
-        let result = execute(&history_cmd);
+        let result = execute(history_cmd);
         
         assert!(result.is_ok());
     }

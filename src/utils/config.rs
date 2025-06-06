@@ -49,7 +49,7 @@ mod tests {
     use super::*;
     use std::fs;
     use tempfile::tempdir;
-    use crate::commands::init::create_config_file;
+    use crate::commands::BucketCommand;
 
     #[test]
     fn test_from_file() {
@@ -58,7 +58,11 @@ mod tests {
         fs::create_dir(&buckets_dir).expect("Failed to create .buckets directory");
 
         // Create and write to the file
-        create_config_file(&buckets_dir.as_path()).expect("Failed to create config file");
+        let init_cmd = crate::commands::init::Init::new(&crate::args::InitCommand {
+            shared: crate::args::SharedArguments::default(),
+            repo_name: "test".to_string(),
+        });
+        init_cmd.create_config_file(&buckets_dir.as_path()).expect("Failed to create config file");
 
         // Read the file
         let config = RepositoryConfig::from_file(temp_dir.path().to_path_buf()).expect("Failed to read config file");

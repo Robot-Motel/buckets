@@ -35,13 +35,13 @@ pub struct CliArguments {
     pub command: Command,
 }
 
-#[derive(Args, Default, Debug)]
+#[derive(Args, Default, Debug, Clone)]
 pub struct SharedArguments {
     #[clap(short, long)]
     pub verbose: bool,
 }
 
-#[derive(Parser)]
+#[derive(Parser, Clone)]
 pub struct InitCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
@@ -50,7 +50,7 @@ pub struct InitCommand {
     pub repo_name: String,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct CreateCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
@@ -59,7 +59,7 @@ pub struct CreateCommand {
     pub bucket_name: String,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct CommitCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
@@ -68,7 +68,7 @@ pub struct CommitCommand {
     pub message: String,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct RestoreCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
@@ -77,7 +77,7 @@ pub struct RestoreCommand {
     pub file: String,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct RollbackCommand {
     #[clap(short, long, value_name = "PATH", value_parser = validate_path)]
     pub path: Option<PathBuf>,
@@ -86,61 +86,61 @@ pub struct RollbackCommand {
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct StashCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct StatusCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct HistoryCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct ListCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct StatsCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct ExpectCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct CheckCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct LinkCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct FinalizeCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct SchemaCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,

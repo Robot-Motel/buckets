@@ -14,7 +14,7 @@ use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::utils::{find_bucket_path, hash_file};
 
-pub fn execute(rollback_command: &RollbackCommand) -> Result<(), BucketError> {
+pub fn execute(rollback_command: RollbackCommand) -> Result<(), BucketError> {
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
     if !checks::is_valid_bucket_repo(&current_dir) {

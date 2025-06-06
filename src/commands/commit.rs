@@ -15,7 +15,7 @@ use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
 
-pub fn execute(commit_command: &CommitCommand) -> Result<(), BucketError> {
+pub fn execute(commit_command: CommitCommand) -> Result<(), BucketError> {
 
     let world = World::new(&commit_command.shared)?;
     

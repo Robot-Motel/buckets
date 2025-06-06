@@ -9,7 +9,7 @@ use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::utils::{connect_to_db, find_bucket_path};
 
-pub fn execute(command: &RestoreCommand) -> Result<(), BucketError> {
+pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
     if !checks::is_valid_bucket_repo(&current_dir) {
@@ -150,7 +150,7 @@ mod tests {
             file: file_path.to_str().unwrap().to_string(),
             shared: Default::default(),
         };
-        execute(&restore_cmd).unwrap();
+        execute(restore_cmd).unwrap();
 
         // Verify the file was restored using binary comparison
         let restored_content = fs::read(&file_path).expect("invalid read");

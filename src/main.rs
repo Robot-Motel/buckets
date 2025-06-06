@@ -6,6 +6,7 @@ use clap::Parser;
 use once_cell::sync::Lazy;
 use crate::args::{CliArguments, Command};
 use crate::errors::BucketError;
+use crate::commands::BucketCommand;
 
 mod args;
 mod commands;
@@ -51,23 +52,23 @@ fn dispatch() -> Result<(), BucketError> {
 
     match &ARGS.command {
         // Commands that modify the repository
-        Command::Init(command) => commands::init::execute(command)?,
-        Command::Create(command) => commands::create::execute(command)?,
-        Command::Commit(command) => commands::commit::execute(command)?,
-        Command::Revert(command) => commands::restore::execute(command)?,
-        Command::Rollback(command) => commands::rollback::execute(command)?,
-        Command::Stash(command) => commands::stash::execute(command)?,
+        Command::Init(command) => commands::init::Init::new(command).execute()?,
+        Command::Create(command) => commands::create::Create::new(command).execute()?,
+        Command::Commit(command) => commands::commit::execute(command.clone())?,
+        Command::Revert(command) => commands::restore::execute(command.clone())?,
+        Command::Rollback(command) => commands::rollback::execute(command.clone())?,
+        Command::Stash(command) => commands::stash::execute(command.clone())?,
         // Informational commands
-        Command::Status(command) => commands::status::execute(command)?,
-        Command::History(command) => commands::history::execute(command)?,
-        Command::List(command) => commands::list::execute(command)?,
-        Command::Stats(command) => commands::stats::execute(command)?,
+        Command::Status(command) => commands::status::execute(command.clone())?,
+        Command::History(command) => commands::history::execute(command.clone())?,
+        Command::List(command) => commands::list::execute(command.clone())?,
+        Command::Stats(command) => commands::stats::execute(command.clone())?,
         // Expectation commands
-        Command::Expect(command) => commands::expect::execute(command)?,
-        Command::Check(command) => commands::check::execute(command)?,
-        Command::Link(command) => commands::link::execute(command)?,
-        Command::Finalize(command) => commands::finalize::execute(command)?,
-        Command::Schema(command) => commands::schema::execute(command)?,
+        Command::Expect(command) => commands::expect::execute(command.clone())?,
+        Command::Check(command) => commands::check::execute(command.clone())?,
+        Command::Link(command) => commands::link::execute(command.clone())?,
+        Command::Finalize(command) => commands::finalize::execute(command.clone())?,
+        Command::Schema(command) => commands::schema::execute(command.clone())?,
     }
 
     Ok(())
