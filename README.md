@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
-
+!! Work in progress, only a few commands are implemented !!
 
 ### Overview
 Buckets is a tool for game asset and expectation management. It controls the version of work a user creates and
