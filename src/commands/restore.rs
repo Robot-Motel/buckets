@@ -8,8 +8,21 @@ use crate::data::bucket::{Bucket, BucketTrait};
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::utils::{connect_to_db, find_bucket_path};
+use crate::commands::BucketCommand;
 
-pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
+/// Restore a file from the last commit
+pub struct Restore {
+    args: RestoreCommand,
+}
+
+impl BucketCommand for Restore {
+    type Args = RestoreCommand;
+
+    fn new(args: &Self::Args) -> Self {
+        Self { args: args.clone() }
+    }
+
+    fn execute(&self) -> Result<(), BucketError> {
     let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
     if !checks::is_valid_bucket_repo(&current_dir) {
@@ -36,7 +49,7 @@ pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
             WHERE bucket_id = ?2
         )"
     )?;
-    let file_path = command.file.clone();
+        let file_path = self.args.file.clone();
     let relative_path = PathBuf::from(&file_path)
         .strip_prefix(&bucket_path)
         .unwrap_or(&PathBuf::from(&file_path))
@@ -58,7 +71,7 @@ pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
     debug!("Restoring {} from {}", target_path.display(), storage_path.display());
 
     // Decompress and copy the file from storage
-    decompress_and_restore_file(&storage_path, &target_path)
+        self.decompress_and_restore_file(&storage_path, &target_path)
         .map_err(|e| {
             error!("Failed to restore file: {}", e);
             BucketError::from(e)
@@ -66,9 +79,11 @@ pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
 
     println!("Restored {}", file_path);
     Ok(())
+    }
 }
 
-fn decompress_and_restore_file(storage_path: &PathBuf, target_path: &PathBuf) -> std::io::Result<()> {
+impl Restore {
+    fn decompress_and_restore_file(&self, storage_path: &PathBuf, target_path: &PathBuf) -> std::io::Result<()> {
     // Create parent directories if they don't exist
     if let Some(parent) = target_path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -93,11 +108,18 @@ fn decompress_and_restore_file(storage_path: &PathBuf, target_path: &PathBuf) ->
     // Copy data from decoder to output 
     std::io::copy(&mut decoder, &mut BufWriter::new(writer))?;
     Ok(())
+    }
+}
+
+// Keep the old function for backward compatibility during transition
+pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
+    let cmd = Restore::new(&command);
+    cmd.execute()
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::commit::compress_and_store_file;
+    use crate::commands::commit::Commit;
 
     use super::*;
     use std::{env, fs};
@@ -175,13 +197,21 @@ mod tests {
         let compressed_path = temp_dir.path().join("compressed.zst");
 
         // Compress and store the file
-        compress_and_store_file(&source_path.to_str().unwrap(), &compressed_path, 0).expect("Failed to compress and store file");
+        let commit_cmd = Commit::new(&crate::args::CommitCommand {
+            shared: crate::args::SharedArguments::default(),
+            message: "test".to_string(),
+        });
+        commit_cmd.compress_and_store_file(&source_path.to_str().unwrap(), &compressed_path, 0).expect("Failed to compress and store file");
         
         // Create restored file path
         let restored_path = temp_dir.path().join("restored.txt");
         
         // Call the function we're testing
-        decompress_and_restore_file(
+        let restore_cmd = Restore::new(&RestoreCommand {
+            shared: crate::args::SharedArguments::default(),
+            file: "test".to_string(),
+        });
+        restore_cmd.decompress_and_restore_file(
             &compressed_path, 
             &restored_path
         ).expect("Failed to decompress and restore file");

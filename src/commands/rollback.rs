@@ -6,7 +6,7 @@ use log::error;
 use zstd::stream::copy_decode;
 use zstd::stream::write::Decoder;
 use crate::args::RollbackCommand;
-use crate::commands::commit::load_last_commit;
+use crate::commands::commit::Commit;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::data::commit::{CommitStatus, CommittedFile};
@@ -39,7 +39,7 @@ fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), Buc
 
     let bucket = Bucket::from_meta_data(bucket_path)?;
 
-    match load_last_commit(bucket.name) {
+    match Commit::load_last_commit(bucket.name) {
         Ok(None) => Err(BucketError::from(Error::new(
             ErrorKind::NotFound,
             "No previous commit found.",
@@ -87,7 +87,7 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
         return Ok(());
     }
 
-    match load_last_commit(bucket.name) {
+    match Commit::load_last_commit(bucket.name) {
         Ok(None) => {
             return Err(BucketError::from(Error::new(ErrorKind::NotFound, "No previous commit found.")));
         }

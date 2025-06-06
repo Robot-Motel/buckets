@@ -54,15 +54,15 @@ fn dispatch() -> Result<(), BucketError> {
         // Commands that modify the repository
         Command::Init(command) => commands::init::Init::new(command).execute()?,
         Command::Create(command) => commands::create::Create::new(command).execute()?,
-        Command::Commit(command) => commands::commit::execute(command.clone())?,
-        Command::Revert(command) => commands::restore::execute(command.clone())?,
+        Command::Commit(command) => commands::commit::Commit::new(command).execute()?,
+        Command::Revert(command) => commands::restore::Restore::new(command).execute()?,
         Command::Rollback(command) => commands::rollback::execute(command.clone())?,
-        Command::Stash(command) => commands::stash::execute(command.clone())?,
+        Command::Stash(command) => commands::stash::Stash::new(command).execute()?,
         // Informational commands
-        Command::Status(command) => commands::status::execute(command.clone())?,
+        Command::Status(command) => commands::status::Status::new(command).execute()?,
         Command::History(command) => commands::history::execute(command.clone())?,
-        Command::List(command) => commands::list::execute(command.clone())?,
-        Command::Stats(command) => commands::stats::execute(command.clone())?,
+        Command::List(command) => commands::list::List::new(command).execute()?,
+        Command::Stats(command) => commands::stats::Stats::new(command).execute()?,
         // Expectation commands
         Command::Expect(command) => commands::expect::execute(command.clone())?,
         Command::Check(command) => commands::check::execute(command.clone())?,
