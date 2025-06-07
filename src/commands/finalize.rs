@@ -1,7 +1,21 @@
 use crate::args::FinalizeCommand;
 use crate::errors::BucketError;
+use crate::commands::BucketCommand;
 
-pub fn execute(_p0: FinalizeCommand) -> Result<(), BucketError> {
-    println!("finalize command");
-    Ok(())
+/// Finalize command placeholder
+pub struct Finalize {
+    args: FinalizeCommand,
+}
+
+impl BucketCommand for Finalize {
+    type Args = FinalizeCommand;
+
+    fn new(args: &Self::Args) -> Self {
+        Self { args: args.clone() }
+    }
+
+    fn execute(&self) -> Result<(), BucketError> {
+        println!("finalize command");
+        Ok(())
+    }
 }

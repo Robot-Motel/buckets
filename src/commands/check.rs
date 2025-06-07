@@ -19,9 +19,3 @@ impl BucketCommand for Check {
         Ok(())
     }
 }
-
-// Keep the old function for backward compatibility during transition
-pub fn execute(_p0: CheckCommand) -> Result<(), BucketError> {
-    let cmd = Check::new(&_p0);
-    cmd.execute()
-}

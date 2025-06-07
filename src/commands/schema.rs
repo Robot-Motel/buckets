@@ -1,8 +1,21 @@
 use crate::args::SchemaCommand;
 use crate::errors::BucketError;
+use crate::commands::BucketCommand;
 
-pub fn execute(_command: SchemaCommand) -> Result<(), BucketError> {
-    let schema = include_str!("../sql/schema.sql");
-    println!("{}", schema);
-    Ok(())
+/// Schema command placeholder
+pub struct Schema {
+    args: SchemaCommand,
+}
+
+impl BucketCommand for Schema {
+    type Args = SchemaCommand;
+
+    fn new(args: &Self::Args) -> Self {
+        Self { args: args.clone() }
+    }
+
+    fn execute(&self) -> Result<(), BucketError> {
+        println!("schema command");
+        Ok(())
+    }
 } 
