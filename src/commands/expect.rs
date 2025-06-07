@@ -19,9 +19,3 @@ impl BucketCommand for Expect {
         Ok(())
     }
 }
-
-// Keep the old function for backward compatibility during transition
-pub fn execute(_p0: ExpectCommand) -> Result<(), BucketError> {
-    let cmd = Expect::new(&_p0);
-    cmd.execute()
-}

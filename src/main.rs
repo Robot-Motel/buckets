@@ -64,7 +64,7 @@ fn dispatch() -> Result<(), BucketError> {
         Command::List(command) => commands::list::List::new(command).execute()?,
         Command::Stats(command) => commands::stats::Stats::new(command).execute()?,
         // Expectation commands
-        Command::Expect(command) => commands::expect::execute(command.clone())?,
+        Command::Expect(command) => commands::expect::Expect::new(command).execute()?,
         Command::Check(command) => commands::check::execute(command.clone())?,
         Command::Link(command) => commands::link::execute(command.clone())?,
         Command::Finalize(command) => commands::finalize::execute(command.clone())?,
