@@ -13,22 +13,36 @@ use crate::data::commit::{CommitStatus, CommittedFile};
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::utils::{find_bucket_path, hash_file};
+use crate::commands::BucketCommand;
 
-pub fn execute(rollback_command: RollbackCommand) -> Result<(), BucketError> {
-    let current_dir = CURRENT_DIR.with(|dir| dir.clone());
+/// Rollback command to revert changes in a bucket
+pub struct Rollback {
+    args: RollbackCommand,
+}
 
-    if !checks::is_valid_bucket_repo(&current_dir) {
-        return Err(BucketError::NotInRepo);
+impl BucketCommand for Rollback {
+    type Args = RollbackCommand;
+
+    fn new(args: &Self::Args) -> Self {
+        Self { args: args.clone() }
     }
 
-    let _ = match find_bucket_path(&current_dir) {
-        Some(path) => path,
-        None => return Err(BucketError::NotAValidBucket),
-    };
+    fn execute(&self) -> Result<(), BucketError> {
+        let current_dir = CURRENT_DIR.with(|dir| dir.clone());
 
-    match &rollback_command.path {
-        None => rollback_all(&current_dir),
-        Some(path) => rollback_single_file(&current_dir, &path)
+        if !checks::is_valid_bucket_repo(&current_dir) {
+            return Err(BucketError::NotInRepo);
+        }
+
+        let _ = match find_bucket_path(&current_dir) {
+            Some(path) => path,
+            None => return Err(BucketError::NotAValidBucket),
+        };
+
+        match &self.args.path {
+            None => rollback_all(&current_dir),
+            Some(path) => rollback_single_file(&current_dir, &path)
+        }
     }
 }
 
