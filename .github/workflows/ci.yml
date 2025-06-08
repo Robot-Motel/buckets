@@ -51,9 +51,7 @@ jobs:
           
       - name: Install Tarpaulin
         run: |
-          if [ -z "$(command -v cargo-tarpaulin)" ]; then
-            cargo install cargo-tarpaulin
-          fi
+          cargo install cargo-tarpaulin
         
       - name: Run Tests with Coverage
         run: |
