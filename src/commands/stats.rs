@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// Stats command placeholder
 pub struct Stats {
+    #[allow(dead_code)]
     args: StatsCommand,
 }
 
@@ -18,10 +19,4 @@ impl BucketCommand for Stats {
         println!("stats command");
         Ok(())
     }
-}
-
-// Keep the old function for backward compatibility during transition
-pub fn execute(_p0: StatsCommand) -> Result<(), BucketError> {
-    let cmd = Stats::new(&_p0);
-    cmd.execute()
 }

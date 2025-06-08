@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// List command placeholder
 pub struct List {
+    #[allow(dead_code)]
     args: ListCommand,
 }
 
@@ -18,10 +19,4 @@ impl BucketCommand for List {
         println!("list command");
         Ok(())
     }
-}
-
-// Keep the old function for backward compatibility during transition
-pub fn execute(_p0: ListCommand) -> Result<(), BucketError> {
-    let cmd = List::new(&_p0);
-    cmd.execute()
 }

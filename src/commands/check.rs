@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// Check command placeholder
 pub struct Check {
+    #[allow(dead_code)]
     args: CheckCommand,
 }
 

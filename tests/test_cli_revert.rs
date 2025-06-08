@@ -2,7 +2,6 @@ mod common;
 
 #[cfg(test)]
 mod tests {
-    use crate::common::tests::get_test_dir;
     use serial_test::serial;
     use std::{fs::File, io::Write};
 
@@ -19,7 +18,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_cli_revert() {
-        let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        let temp_dir = tempdir().expect("invalid temp dir").keep();
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")

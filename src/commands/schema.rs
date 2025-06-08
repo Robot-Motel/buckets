@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// Schema command placeholder
 pub struct Schema {
+    #[allow(dead_code)]
     args: SchemaCommand,
 }
 

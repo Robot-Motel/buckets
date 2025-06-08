@@ -14,6 +14,7 @@ use crate::commands::BucketCommand;
 
 /// Show status of the current bucket or repository
 pub struct Status {
+    #[allow(dead_code)]
     args: StatusCommand,
 }
 
@@ -116,10 +117,4 @@ impl Status {
 
         Ok(buckets)
     }
-}
-
-// Keep the old function for backward compatibility during transition
-pub fn execute(_status_command: StatusCommand) -> Result<(), BucketError> {
-    let cmd = Status::new(&_status_command);
-    cmd.execute()
 }
