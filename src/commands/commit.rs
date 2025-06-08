@@ -136,6 +136,7 @@ impl Commit {
                 format!("Error inserting into database: {}, commit id: {}, file path: {}, hash: {}", e, commit_id, file_path, hash),
             )
         })?;
+        connection.close().expect("failed to close connection");
         Ok(())
     }
 
@@ -159,11 +160,14 @@ impl Commit {
             message.parse::<String>().unwrap()
         ])?;
 
-        if let Some(row) = rows.next()? {
+        let result = if let Some(row) = rows.next()? {
             Ok(row.get(0)?)
         } else {
             Err(BucketError::from(duckdb::Error::QueryReturnedNoRows))
-        }
+        };
+        
+        connection.close().expect("failed to close connection");
+        result
     }
 
     pub fn compress_and_store_file(
@@ -254,6 +258,8 @@ impl Commit {
             });
         }
 
+        connection.close().expect("failed to close connection");
+
         Ok(Some(CommitData {
             bucket: bucket_name,
             files,
@@ -261,6 +267,7 @@ impl Commit {
             previous: None,
             next: None,
         }))
+        
     }
 }
 
@@ -284,8 +291,10 @@ mod tests {
     use std::str::FromStr;
     use tempfile::tempdir;
     use uuid::Uuid;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_process_files() {
         // Need to setup a proper test environment
         let temp_dir = tempdir().expect("invalid temp dir").into_path();

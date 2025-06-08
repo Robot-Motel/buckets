@@ -5,6 +5,7 @@ mod tests {
     use predicates::prelude::predicate;
     use uuid::{Uuid, Version};
     use crate::common::tests::get_test_dir;
+    use serial_test::serial;
 
     /// Test the `create` command.
     ///
@@ -14,6 +15,7 @@ mod tests {
     /// # Expected output
     ///
     #[test]
+    #[serial]
     fn test_cli_create_no_repo() {
         let temp_dir = get_test_dir();
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
@@ -26,6 +28,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_cli_create() {
         let temp_dir = get_test_dir();
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");

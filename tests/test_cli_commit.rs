@@ -1,13 +1,14 @@
 mod common;
+
 #[cfg(test)]
 mod tests {
+    use crate::common::tests::get_test_dir;
+    use serial_test::serial;
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
     use duckdb::Connection;
     use uuid::{Uuid, Version};
-    use crate::common::tests::get_test_dir;
-
     /// Test the `commit` command.
     ///
     /// # Commands
@@ -16,6 +17,7 @@ mod tests {
     /// # Expected output
     ///
     #[test]
+    #[serial]
     fn test_cli_commit() {
         let repo_dir = setup();
 
@@ -78,9 +80,8 @@ mod tests {
             Err(e) => {
                 eprintln!("Error preparing query: {}", e);
             }
-
+        }
     }
-}
 
     fn setup() -> PathBuf {
         let temp_dir = get_test_dir();

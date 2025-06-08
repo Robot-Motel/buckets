@@ -3,6 +3,7 @@ mod common;
 #[cfg(test)]
 mod acceptance_tests {
     use crate::common::tests::get_test_dir;
+    use serial_test::serial;
     use std::fs::File;
     use std::io::Write;
     use predicates::prelude::*;
@@ -15,6 +16,7 @@ mod acceptance_tests {
     /// # Expected output
     ///
     #[test]
+    #[serial]
     fn test_cli_history_one_commit() {
         // Setup repo with a commit
         let repo_dir = setup();
@@ -40,6 +42,7 @@ mod acceptance_tests {
     }
 
     #[test]
+    #[serial]
     fn test_cli_history_multiple_commits() {
         // Setup repo with multiple commits
         let repo_dir = setup();

@@ -78,6 +78,7 @@ impl BucketCommand for Restore {
         })?;
 
     println!("Restored {}", file_path);
+    connection.close().expect("failed to close connection");
     Ok(())
     }
 }
@@ -120,6 +121,7 @@ pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
 #[cfg(test)]
 mod tests {
     use crate::commands::commit::Commit;
+    use serial_test::serial;
 
     use super::*;
     use std::{env, fs};
@@ -127,9 +129,11 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    #[serial]
     fn test_restore_command() {
         // Setup test environment
         let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        log::debug!("temp_dir: {:?}", temp_dir);
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")
@@ -180,6 +184,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_decompress_and_restore_file() {
         // Create a temporary directory for test files
         let temp_dir = tempdir().expect("Failed to create temp directory");

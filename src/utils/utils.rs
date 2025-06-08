@@ -293,6 +293,7 @@ mod tests {
 
         // Ensure we can execute a query
         conn.execute("SELECT 1;", []).expect("failed to execute query");
+        conn.close().expect("failed to close connection");
     }
 
 }

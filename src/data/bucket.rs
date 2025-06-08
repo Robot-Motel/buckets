@@ -161,6 +161,8 @@ impl BucketTrait for Bucket {
             });
         }
 
+        connection.close().expect("failed to close connection");
+
         Ok(Some(Commit {
             bucket: self.name.clone(),
             files,

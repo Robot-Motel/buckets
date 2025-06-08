@@ -94,7 +94,8 @@ mod tests {
     use std::io::Write;
     use tempfile::tempdir;
     use crate::args::HistoryCommand;
-
+    use serial_test::serial;
+    
     #[test]
     fn test_commit_record_display() {
         let record = CommitRecord::new(
@@ -109,6 +110,7 @@ mod tests {
     }
     
     #[test]
+    #[serial]
     fn test_fetch_commit_history() {
         // Setup test environment
         let temp_dir = tempdir().expect("invalid temp dir").into_path();
@@ -149,6 +151,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_history_command() {
         // Setup test environment
         let temp_dir = tempdir().expect("invalid temp dir").into_path();

@@ -6,6 +6,7 @@ mod tests {
     use std::path::PathBuf;
     use predicates::prelude::predicate;
     use crate::common::tests::get_test_dir;
+    use serial_test::serial;
 
     /// Test the `status` command.
     ///
@@ -15,6 +16,7 @@ mod tests {
     /// # Expected output
     ///
     #[test]
+    #[serial]
     fn test_cli_status() {
         let repo_dir = setup();
 
