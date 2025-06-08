@@ -292,7 +292,6 @@ mod tests {
     fn test_process_files() {
         // Need to setup a proper test environment
         let temp_dir = tempdir().expect("invalid temp dir").keep();
-        dbg!(&temp_dir);
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")
