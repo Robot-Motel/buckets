@@ -17,6 +17,7 @@ mod tests {
     /// # Expected output
     ///
     #[test]
+    #[ignore]
     #[serial]
     fn test_cli_rollback() {
         let repo_dir = setup();

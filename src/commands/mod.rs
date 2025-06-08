@@ -88,10 +88,13 @@ macro_rules! impl_command {
 /// // Method 2: Execute with args (creates instance automatically)
 /// CommandDispatcher::execute_with_args::<Init>(init_args)?;
 /// ```
+#[allow(dead_code)]
 pub struct CommandDispatcher;
 
 impl CommandDispatcher {
+ 
     /// Execute a command using the trait system with optional pre/post processing
+    #[allow(dead_code)]
     pub fn execute<T: BucketCommand>(command: T) -> Result<(), BucketError> {
         // Pre-execution hooks can go here (logging, validation, etc.)
         log::debug!("Executing command: {}", std::any::type_name::<T>());
@@ -108,6 +111,7 @@ impl CommandDispatcher {
     }
     
     /// Execute a command with arguments, creating the command instance automatically
+    #[allow(dead_code)]
     pub fn execute_with_args<T: BucketCommand>(args: &T::Args) -> Result<(), BucketError> {
         let command = T::new(args);
         Self::execute(command)

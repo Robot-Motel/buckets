@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// Expect command placeholder
 pub struct Expect {
+    #[allow(dead_code)]
     args: ExpectCommand,
 }
 

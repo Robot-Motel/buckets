@@ -2,7 +2,7 @@ use chrono::Utc;
 use duckdb::Connection;
 use log::error;
 use uuid::Uuid;
-use crate::args::{CreateCommand, SharedArguments};
+use crate::args::CreateCommand;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::errors::BucketError;
@@ -128,17 +128,4 @@ impl Create {
 
     Ok(())
     }
-}
-
-// Keep the old function for backward compatibility during transition
-pub fn execute(create_command: CreateCommand) -> Result<(), BucketError> {
-    let cmd = Create {
-        args: CreateCommand {
-            shared: SharedArguments {
-                verbose: create_command.shared.verbose,
-            },
-            bucket_name: create_command.bucket_name.clone(),
-        },
-    };
-    cmd.execute()
 }

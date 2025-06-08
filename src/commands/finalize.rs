@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// Finalize command placeholder
 pub struct Finalize {
+    #[allow(dead_code)]
     args: FinalizeCommand,
 }
 

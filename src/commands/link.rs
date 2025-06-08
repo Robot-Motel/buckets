@@ -4,6 +4,7 @@ use crate::commands::BucketCommand;
 
 /// Link command placeholder
 pub struct Link {
+    #[allow(dead_code)]
     args: LinkCommand,
 }
 

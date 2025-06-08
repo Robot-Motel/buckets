@@ -10,14 +10,19 @@ use crate::{
 
 pub struct World {
     // Path to the working directory
+    #[allow(dead_code)]
     pub work_dir: PathBuf,
     // The root directory of the repository
+    #[allow(dead_code)]
     pub repo_root: PathBuf,
     // Path to the database file
+    #[allow(dead_code)]
     pub repo_db_path: PathBuf,
     // The active bucket, None if no bucket is active
+    #[allow(dead_code)]
     pub bucket: Option<Bucket>,
     // Verbose output
+    #[allow(dead_code)]
     pub verbose: bool,
 }
 

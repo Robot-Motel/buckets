@@ -112,12 +112,6 @@ impl Restore {
     }
 }
 
-// Keep the old function for backward compatibility during transition
-pub fn execute(command: RestoreCommand) -> Result<(), BucketError> {
-    let cmd = Restore::new(&command);
-    cmd.execute()
-}
-
 #[cfg(test)]
 mod tests {
     use crate::commands::commit::Commit;
@@ -132,7 +126,7 @@ mod tests {
     #[serial]
     fn test_restore_command() {
         // Setup test environment
-        let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        let temp_dir = tempdir().expect("invalid temp dir").keep();
         log::debug!("temp_dir: {:?}", temp_dir);
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
@@ -176,7 +170,8 @@ mod tests {
             file: file_path.to_str().unwrap().to_string(),
             shared: Default::default(),
         };
-        execute(restore_cmd).unwrap();
+        let cmd = Restore::new(&restore_cmd);
+        cmd.execute().unwrap();
 
         // Verify the file was restored using binary comparison
         let restored_content = fs::read(&file_path).expect("invalid read");

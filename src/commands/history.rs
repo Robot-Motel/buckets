@@ -113,7 +113,7 @@ mod tests {
     #[serial]
     fn test_fetch_commit_history() {
         // Setup test environment
-        let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        let temp_dir = tempdir().expect("invalid temp dir").keep();
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")
@@ -154,7 +154,7 @@ mod tests {
     #[serial]
     fn test_history_command() {
         // Setup test environment
-        let temp_dir = tempdir().expect("invalid temp dir").into_path();
+        let temp_dir = tempdir().expect("invalid temp dir").keep();
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
         cmd1.current_dir(temp_dir.as_path())
             .arg("init")
