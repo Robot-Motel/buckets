@@ -51,10 +51,10 @@ jobs:
           
       - name: Install Tarpaulin
         run: |
-          if ! command -v cargo-tarpaulin &> /dev/null; then
+          if [ -z "$(command -v cargo-tarpaulin)" ]; then
             cargo install cargo-tarpaulin
           fi
-          
+        
       - name: Run Tests with Coverage
         run: |
          cargo tarpaulin --release --out Html --timeout 120
