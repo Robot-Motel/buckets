@@ -167,6 +167,7 @@ impl Commit {
 }
 
 impl CommittedFile {
+    #[allow(dead_code)]
     pub fn new(name: String, hash: Hash, previous_hash: Hash, status: CommitStatus) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -178,13 +179,16 @@ impl CommittedFile {
     }
 
     pub fn compress_and_store(&self, bucket_path: &PathBuf) -> io::Result<()> {
-        compress_and_store_file(&self.name, &bucket_path, 0)
+        let input_path = bucket_path.join(&self.name);
+        let output_path = bucket_path.join(".b").join("storage").join(&self.hash.to_string());
+
+        compress_and_store_file(&input_path, &output_path, 0)
     }
 
     pub fn restore(&self, bucket_path: &PathBuf) -> io::Result<()> {
         let input_path = bucket_path.join(".b").join("storage").join(&self.previous_hash.to_string());
         let output_path = bucket_path.join(&self.name);
 
-        restore_file(&bucket_path, &input_path, &output_path)
+        restore_file(&input_path, &output_path)
     }
 }

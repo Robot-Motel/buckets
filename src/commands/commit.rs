@@ -3,7 +3,6 @@ use crate::commands::BucketCommand;
 use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit as CommitData, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::utils::compression::compress_and_store_file;
 use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file};
 use crate::world::World;
 use blake3::Hash;
@@ -108,12 +107,10 @@ impl Commit {
             // Insert the file into the database
             self.insert_file_into_db(&commit_id, &file.name, &file.hash.to_string())?;
 
-            // Compress and store the file
-            compress_and_store_file(&file.name, output.as_path(), 0)
-                .map_err(|e| {
-                    error!("Error compressing and storing file: {}", e);
-                    e
-                })?;
+            file.compress_and_store(&output).map_err(|e| {
+                error!("Error compressing and storing file: {}", e);
+                e
+            })?;
         }
         Ok(())
     }

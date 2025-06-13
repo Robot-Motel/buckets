@@ -197,7 +197,7 @@ mod tests {
         // Create compressed file path
         let compressed_path = temp_dir.path().join("compressed.zst");
 
-        compress_and_store_file(&source_path.to_str().unwrap(), &compressed_path, 0).expect("Failed to compress and store file");
+        compress_and_store_file(&source_path, &compressed_path, 0).expect("Failed to compress and store file");
         
         // Create restored file path
         let restored_path = temp_dir.path().join("restored.txt");

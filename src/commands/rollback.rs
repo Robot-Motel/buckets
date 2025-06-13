@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use log::error;
 use crate::args::RollbackCommand;
 use crate::commands::commit::Commit;
-use crate::utils::compression::restore_file;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::data::commit::CommitStatus;
