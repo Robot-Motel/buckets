@@ -1,15 +1,14 @@
-use std::fs::File;
-use std::io;
-use std::io::{BufReader, BufWriter, Error, ErrorKind, Write};
+use std::io::Error;
+use std::io::ErrorKind;
 use std::path::PathBuf;
+
 use log::error;
-use zstd::stream::copy_decode;
-use zstd::stream::write::Decoder;
 use crate::args::RollbackCommand;
 use crate::commands::commit::Commit;
+use crate::utils::compression::restore_file;
 use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
-use crate::data::commit::{CommitStatus, CommittedFile};
+use crate::data::commit::CommitStatus;
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::utils::{find_bucket_path, hash_file};
@@ -130,20 +129,4 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
     }
 
     Ok(())
-}
-
-fn restore_file(bucket_path: &PathBuf, p1: &CommittedFile) -> io::Result<()>{
-    let input_path = bucket_path.join(".b").join("storage").join(&p1.previous_hash.to_string());
-    let output_path = bucket_path.join(&p1.name);
-
-    let input_file = File::open(input_path)?;
-    let output_file = File::create(output_path)?;
-    let reader = BufReader::new(input_file);
-    let writer = BufWriter::new(output_file);
-
-    let mut decoder = Decoder::new(writer)?;
-    copy_decode(reader, &mut decoder)?;
-    decoder.flush()?;
-    Ok(())
-
 }

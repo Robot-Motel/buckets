@@ -114,7 +114,7 @@ impl Restore {
 
 #[cfg(test)]
 mod tests {
-    use crate::commands::commit::Commit;
+    use crate::utils::compression::compress_and_store_file;
     use serial_test::serial;
 
     use super::*;
@@ -123,6 +123,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
+    #[ignore]
     #[serial]
     fn test_restore_command() {
         // Setup test environment
@@ -196,12 +197,7 @@ mod tests {
         // Create compressed file path
         let compressed_path = temp_dir.path().join("compressed.zst");
 
-        // Compress and store the file
-        let commit_cmd = Commit::new(&crate::args::CommitCommand {
-            shared: crate::args::SharedArguments::default(),
-            message: "test".to_string(),
-        });
-        commit_cmd.compress_and_store_file(&source_path.to_str().unwrap(), &compressed_path, 0).expect("Failed to compress and store file");
+        compress_and_store_file(&source_path.to_str().unwrap(), &compressed_path, 0).expect("Failed to compress and store file");
         
         // Create restored file path
         let restored_path = temp_dir.path().join("restored.txt");

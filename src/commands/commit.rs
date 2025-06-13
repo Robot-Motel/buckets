@@ -3,18 +3,17 @@ use crate::commands::BucketCommand;
 use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit as CommitData, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
+use crate::utils::compression::compress_and_store_file;
 use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file};
 use crate::world::World;
 use blake3::Hash;
 use duckdb::params;
 use log::{debug, error};
-use std::fs::File;
 use std::io;
-use std::io::{BufReader, BufWriter, Error, ErrorKind};
-use std::path::{Path, PathBuf};
+use std::io::{Error, ErrorKind};
+use std::path::PathBuf;
 use std::str::FromStr;
 use uuid::Uuid;
-use zstd::Encoder;
 
 /// Commit changes to a bucket
 pub struct Commit {
@@ -110,7 +109,7 @@ impl Commit {
             self.insert_file_into_db(&commit_id, &file.name, &file.hash.to_string())?;
 
             // Compress and store the file
-            self.compress_and_store_file(&file.name, output.as_path(), 0)
+            compress_and_store_file(&file.name, output.as_path(), 0)
                 .map_err(|e| {
                     error!("Error compressing and storing file: {}", e);
                     e
@@ -170,24 +169,7 @@ impl Commit {
         result
     }
 
-    pub fn compress_and_store_file(
-        &self,
-        input_path: &str,
-        output_path: &Path,
-        compression_level: i32,
-    ) -> io::Result<()> {
-        let input_file = File::open(input_path)?;
-        let output_file = File::create(output_path)?;
 
-        let mut reader = BufReader::new(input_file);
-        let writer = BufWriter::new(output_file);
-        let mut encoder = Encoder::new(writer, compression_level)?;
-
-        std::io::copy(&mut reader, &mut encoder)?;
-        encoder.finish()?; // Finalize the compression
-
-        Ok(())
-    }
 
     fn list_files_with_metadata_in_bucket(&self, bucket_path: PathBuf) -> io::Result<CommitData> {
         let mut files = Vec::new();
@@ -358,53 +340,5 @@ mod tests {
                 panic!("Error processing files: {}", e);
             }
         }
-    }
-
-    #[test]
-    fn test_compress_and_store_file() {
-        // Create a temporary directory for test files
-        let temp_dir = tempdir().expect("Failed to create temp directory");
-
-        // Create original content and source file
-        let original_content = b"This is test content for compression and storage";
-        let source_path = temp_dir.path().join("source.txt");
-        {
-            let mut source_file = File::create(&source_path).expect("Failed to create source file");
-            source_file
-                .write_all(original_content)
-                .expect("Failed to write to source file");
-        }
-
-        // Define the compressed output path
-        let compressed_path = temp_dir
-            .path()
-            .join("1c4fc261196bfcd70efd6d5217a167d86c24cd465f144f15cd41ac336c1106e3");
-
-        // Call the function we're testing
-        Commit::compress_and_store_file(
-            &Commit::new(&crate::args::CommitCommand {
-                shared: crate::args::SharedArguments::default(),
-                message: "".to_string(),
-            }),     
-            source_path.to_str().expect("Invalid path"),
-            &compressed_path,
-            0,
-        )
-        .expect("Failed to compress file");
-
-        // Verify compressed file exists
-        assert!(compressed_path.exists(), "Compressed file wasn't created");
-
-        // Decompress the file using a proper Decoder
-        let compressed_file = File::open(&compressed_path).expect("Failed to open compressed file");
-        let mut decoder = zstd::Decoder::new(compressed_file).expect("Failed to create decoder");
-        let mut decompressed_content = Vec::new();
-        std::io::copy(&mut decoder, &mut decompressed_content).expect("Failed to decompress");
-
-        // Compare content
-        assert_eq!(
-            decompressed_content, original_content,
-            "Decompressed content doesn't match original"
-        );
     }
 }
