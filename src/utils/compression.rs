@@ -22,9 +22,7 @@ pub fn compress_and_store_file(
     Ok(())
 }
 
-pub fn restore_file(bucket_path: &PathBuf, p1: &CommittedFile) -> io::Result<()>{
-    let input_path = bucket_path.join(".b").join("storage").join(&p1.previous_hash.to_string());
-    let output_path = bucket_path.join(&p1.name);
+pub fn restore_file(bucket_path: &PathBuf, input_path: &PathBuf, output_path: &PathBuf) -> io::Result<()>{
 
     let input_file = File::open(input_path)?;
     let output_file = File::create(output_path)?;
@@ -66,26 +64,14 @@ mod tests {
     fn test_restore_file() {
         let dir = tempdir().unwrap();
         let bucket_path = dir.path().to_path_buf();
-        let storage_path = bucket_path.join(".b").join("storage");
-        fs::create_dir_all(&storage_path).unwrap();
-
-        let input_path = storage_path.join("input.zst");
+        let input_path = bucket_path.join("input.zst");
         let output_path = bucket_path.join("output.txt");
 
         // Create a test file
         fs::write(&input_path, "Hello, world!").unwrap();
 
-        // Create a CommittedFile instance
-        let committed_file = CommittedFile {
-            name: "output.txt".to_string(),
-            previous_hash: blake3::hash("input".as_bytes()).into(),
-            id: Uuid::new_v4(),
-            hash: blake3::hash("some_hash".as_bytes()).into(),
-            status: CommitStatus::Committed,
-        };
-
         // Restore the file
-        restore_file(&bucket_path, &committed_file).unwrap();
+        restore_file(&bucket_path, &input_path, &output_path).unwrap();
 
         // Check if the restored file exists and contains the expected content
         assert!(output_path.exists());

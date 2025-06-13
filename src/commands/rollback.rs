@@ -75,7 +75,7 @@ fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), Buc
                     "File not found in previous commit.",
                 ))),
                 Some(file_to_restore) => {
-                    restore_file(bucket_path, file_to_restore)?; // Propagate any error from restore_file
+                    file_to_restore.restore(bucket_path)?; // Propagate any error from restore_file
                     Ok(())
                 }
             }
@@ -119,7 +119,7 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
                 .iter()
                 .filter(|change| change.status == CommitStatus::Modified)
                 .for_each(|change| {
-                    restore_file(&bucket_path, change).expect("Failed to restore file.");
+                    change.restore(&bucket_path).expect("Failed to restore file.");
                 });
         }
         Err(_) => {

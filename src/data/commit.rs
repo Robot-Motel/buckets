@@ -1,9 +1,13 @@
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
+use std::io;
+use std::path::PathBuf;
 use std::str::FromStr;
 use blake3::Hash;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
+
+use crate::utils::compression::{compress_and_store_file, restore_file};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum CommitStatus {
@@ -162,3 +166,25 @@ impl Commit {
     }
 }
 
+impl CommittedFile {
+    pub fn new(name: String, hash: Hash, previous_hash: Hash, status: CommitStatus) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name,
+            hash,
+            previous_hash,
+            status,
+        }
+    }
+
+    pub fn compress_and_store(&self, bucket_path: &PathBuf) -> io::Result<()> {
+        compress_and_store_file(&self.name, &bucket_path, 0)
+    }
+
+    pub fn restore(&self, bucket_path: &PathBuf) -> io::Result<()> {
+        let input_path = bucket_path.join(".b").join("storage").join(&self.previous_hash.to_string());
+        let output_path = bucket_path.join(&self.name);
+
+        restore_file(&bucket_path, &input_path, &output_path)
+    }
+}
