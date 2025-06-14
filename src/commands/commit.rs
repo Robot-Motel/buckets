@@ -107,12 +107,8 @@ impl Commit {
         // Insert the commit into the database
         let commit_id = self.insert_commit_into_db(bucket_id, message)?;
 
-        // Create the storage directory
-        let storage_path = bucket_path.join(".b").join("storage");
-
         // Process each file in the commit
         for file in files {
-            let output = storage_path.join(&file.hash.to_string());
 
             // Insert the file into the database
             self.insert_file_into_db(&commit_id, &file.name, &file.hash.to_string())?;
