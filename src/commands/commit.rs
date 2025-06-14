@@ -27,12 +27,16 @@ impl BucketCommand for Commit {
     }
 
     fn execute(&self) -> Result<(), BucketError> {
+        println!("Executing commit command ########################################################## ");
+
         let world = World::new(&self.args.shared)?;
 
         let bucket = match &world.bucket {
             Some(bucket) => bucket,
             None => return Err(BucketError::NotInBucket),
         };
+
+        println!("Bucket: {} ########################################################## ", bucket.name);
 
         // create a list of each file in the bucket directory, recursively
         // and create a blake3 hash for each file and add to current_commit
@@ -44,10 +48,13 @@ impl BucketCommand for Commit {
             );
         }
 
+        println!("Current commit: ########################################################## ");
+
         // Load the previous commit, if it exists
         match Commit::load_last_commit(bucket.name.clone()) {
             Ok(None) => {
                 // There is no previous commit; Process all files in the current commit
+                println!("No previous commit found. Processing all files. ########################################################## ");
                 self.process_files(
                     bucket.id,
                     &bucket.relative_bucket_path,
@@ -57,8 +64,10 @@ impl BucketCommand for Commit {
             }
             Ok(Some(previous_commit)) => {
                 // Compare the current commit with the previous commit
+                println!("Previous commit found. Comparing with current commit. ########################################################## ");
                 if let Some(changes) = current_commit.compare(&previous_commit) {
                     // Process the files that have changed
+                    println!("Processing files that have changed. ########################################################## ");
                     self.process_files(
                         bucket.id,
                         &bucket.get_full_bucket_path()?,
@@ -67,11 +76,13 @@ impl BucketCommand for Commit {
                     )?;
                 } else {
                     // if there are no difference with previous commit cancel commit
+                    println!("No changes detected. Commit cancelled. ########################################################## ");
                     println!("No changes detected. Commit cancelled.");
                     return Ok(());
                 }
             }
             Err(_) => {
+                println!("Failed to load previous commit. ########################################################## ");
                 error!("Failed to load previous commit.");
                 return Err(BucketError::from(Error::new(
                     ErrorKind::Other,
@@ -79,6 +90,7 @@ impl BucketCommand for Commit {
                 )));
             }
         }
+        println!("Commit completed. ########################################################## ");
 
         Ok(())
     }
@@ -93,7 +105,6 @@ impl Commit {
         message: &String,
     ) -> Result<(), BucketError> {
         // Insert the commit into the database
-        debug!("bucket id: {}", bucket_id.to_string().to_uppercase());
         let commit_id = self.insert_commit_into_db(bucket_id, message)?;
 
         // Create the storage directory
@@ -101,13 +112,12 @@ impl Commit {
 
         // Process each file in the commit
         for file in files {
-            debug!("Processing file: {} {}", file.name, file.hash);
             let output = storage_path.join(&file.hash.to_string());
 
             // Insert the file into the database
             self.insert_file_into_db(&commit_id, &file.name, &file.hash.to_string())?;
 
-            file.compress_and_store(&output).map_err(|e| {
+            file.compress_and_store(&bucket_path).map_err(|e| {
                 error!("Error compressing and storing file: {}", e);
                 e
             })?;
@@ -264,7 +274,7 @@ mod tests {
     use std::str::FromStr;
     use tempfile::tempdir;
     use uuid::Uuid;
-    use serial_test::serial;
+    use serial_test::serial;    
 
     #[test]
     #[serial]

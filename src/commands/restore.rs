@@ -123,7 +123,6 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    #[ignore]
     #[serial]
     fn test_restore_command() {
         // Setup test environment
