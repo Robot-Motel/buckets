@@ -30,11 +30,9 @@ jobs:
         run: |
           cargo build --release --all-features
           cargo test --release
-          
-      - name: Install just, cargo-llvm-cov, cargo-nextest
-        uses: taiki-e/install-action@v2.42.4
-        with:
-          tool: just,cargo-llvm-cov,cargo-nextest
+    
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@cargo-nextest
 
       - name: Generate code coverage
         run: cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
