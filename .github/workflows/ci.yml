@@ -22,44 +22,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Install latest stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-          
-      - name: Cache cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('**/Cargo.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-
-            ${{ runner.os }}-cargo-
+
+      - run: rustup toolchain install stable --profile minimal
+      - uses: Swatinem/rust-cache@v2
             
       - name: Build and Test
         run: |
           cargo build --release --all-features
           cargo test --release
           
-      - name: Install Tarpaulin
-        run: |
-          cargo install cargo-tarpaulin
-        
-      - name: Run Tests with Coverage
-        run: |
-         cargo tarpaulin --release --out Html --timeout 120
-         mv tarpaulin-report.html coverage.html
-         
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+      - name: Install just, cargo-llvm-cov, cargo-nextest
+        uses: taiki-e/install-action@v2.42.4
         with:
-         name: coverage-report
-         path: coverage.html
+          tool: just,cargo-llvm-cov,cargo-nextest
+
+      - name: Generate code coverage
+        run: cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: lcov.info
