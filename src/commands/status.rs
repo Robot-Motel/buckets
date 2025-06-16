@@ -1,6 +1,5 @@
 use std::env;
 use std::io::{self, Error, ErrorKind};
-use duckdb::Connection;
 use log::error;
 use crate::args::StatusCommand;
 use crate::commands::commit::Commit;
@@ -9,7 +8,7 @@ use crate::data::bucket::{Bucket, BucketTrait};
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
-use crate::utils::utils::{find_bucket_path, find_directory_in_parents};
+use crate::utils::utils::{find_bucket_path, with_db_connection};
 use crate::commands::BucketCommand;
 
 /// Show status of the current bucket or repository
@@ -99,30 +98,25 @@ impl Status {
     }
 
     fn query_buckets(&self) -> Result<Vec<Bucket>, BucketError> {
-        let current_dir = env::current_dir().map_err(|e| BucketError::from(
-            io::Error::new(io::ErrorKind::Other, format!("Failed to get current directory: {}", e))))?;
-        let db_path = find_directory_in_parents(&current_dir, ".buckets")
-            .ok_or_else(|| BucketError::NotInRepo)?
-            .join("buckets.db");
-        let connection = Connection::open(db_path).map_err(|e| BucketError::from(
-            io::Error::new(io::ErrorKind::Other, format!("Failed to open database: {}", e))))?;
-        let mut stmt = connection.prepare("SELECT id, name, path FROM buckets").map_err(|e| BucketError::from(e))?;
-        let bucket_iter = stmt.query_map([], |row| {
-            let uuid_str: String = row.get(0)?;
-            let path_str: String = row.get(2)?;
-            let uuid = uuid::Uuid::parse_str(&uuid_str)
-                .map_err(|e| BucketError::InvalidData(e.to_string()))?;
-            Ok(Bucket {
-                id: uuid,
-                name: row.get(1)?,
-                relative_bucket_path: std::path::PathBuf::from(path_str),
-            })
-        }).map_err(BucketError::from)?;
-        let mut buckets = Vec::new();
-        for bucket in bucket_iter {
-            buckets.push(bucket.map_err(BucketError::from)?); // Ensure all errors are converted properly
-        }
+        with_db_connection(|connection| {
+            let mut stmt = connection.prepare("SELECT id, name, path FROM buckets")?;
+            let bucket_iter = stmt.query_map([], |row| {
+                let uuid_str: String = row.get(0)?;
+                let path_str: String = row.get(2)?;
+                let uuid = uuid::Uuid::parse_str(&uuid_str)
+                    .map_err(|e| BucketError::InvalidData(e.to_string()))?;
+                Ok(Bucket {
+                    id: uuid,
+                    name: row.get(1)?,
+                    relative_bucket_path: std::path::PathBuf::from(path_str),
+                })
+            }).map_err(BucketError::from)?;
+            let mut buckets = Vec::new();
+            for bucket in bucket_iter {
+                buckets.push(bucket.map_err(BucketError::from)?); // Ensure all errors are converted properly
+            }
 
-        Ok(buckets)
+            Ok(buckets)
+        })
     }
 }
