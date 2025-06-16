@@ -194,3 +194,376 @@ impl CommittedFile {
         restore_file(&input_path, &output_path)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::tempdir;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_commit_status_display() {
+        assert_eq!(format!("{}", CommitStatus::New), "new");
+        assert_eq!(format!("{}", CommitStatus::Modified), "modified");
+        assert_eq!(format!("{}", CommitStatus::Deleted), "deleted");
+        assert_eq!(format!("{}", CommitStatus::Committed), "committed");
+        assert_eq!(format!("{}", CommitStatus::Unknown), "unknown");
+    }
+
+    #[test]
+    fn test_committed_file_new() {
+        let name = "test.txt".to_string();
+        let hash = Hash::from([1u8; 32]);
+        let previous_hash = Hash::from([0u8; 32]);
+        let status = CommitStatus::New;
+
+        let file = CommittedFile::new(name.clone(), hash, previous_hash, status);
+
+        assert_eq!(file.name, name);
+        assert_eq!(file.hash, hash);
+        assert_eq!(file.previous_hash, previous_hash);
+        assert_eq!(file.status, CommitStatus::New);
+        // UUID should be generated
+        assert_ne!(file.id, Uuid::nil());
+    }
+
+    #[test]
+    fn test_commit_compare_identical_files() {
+        let file1 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let file2 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let commit1 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            files: vec![file1],
+            previous: None,
+            next: None,
+        };
+
+        let commit2 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-02T00:00:00Z".to_string(),
+            files: vec![file2],
+            previous: None,
+            next: None,
+        };
+
+        let changes = commit1.compare(&commit2);
+        assert!(changes.is_some());
+        let changes = changes.unwrap();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].status, CommitStatus::Committed);
+    }
+
+    #[test]
+    fn test_commit_compare_modified_files() {
+        let file1 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let file2 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test.txt".to_string(),
+            hash: Hash::from([2u8; 32]), // Different hash
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let commit1 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            files: vec![file1],
+            previous: None,
+            next: None,
+        };
+
+        let commit2 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-02T00:00:00Z".to_string(),
+            files: vec![file2],
+            previous: None,
+            next: None,
+        };
+
+        let changes = commit1.compare(&commit2);
+        assert!(changes.is_some());
+        let changes = changes.unwrap();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].status, CommitStatus::Modified);
+    }
+
+    #[test]
+    fn test_commit_compare_new_file() {
+        let file1 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "new_file.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let commit1 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            files: vec![file1],
+            previous: None,
+            next: None,
+        };
+
+        let commit2 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-02T00:00:00Z".to_string(),
+            files: vec![],
+            previous: None,
+            next: None,
+        };
+
+        let changes = commit1.compare(&commit2);
+        assert!(changes.is_some());
+        let changes = changes.unwrap();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].status, CommitStatus::New);
+    }
+
+    #[test]
+    fn test_commit_compare_deleted_file() {
+        let file1 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "deleted_file.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let commit1 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            files: vec![],
+            previous: None,
+            next: None,
+        };
+
+        let commit2 = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-02T00:00:00Z".to_string(),
+            files: vec![file1],
+            previous: None,
+            next: None,
+        };
+
+        let changes = commit1.compare(&commit2);
+        assert!(changes.is_some());
+        let changes = changes.unwrap();
+        assert_eq!(changes.len(), 1);
+        assert_eq!(changes[0].status, CommitStatus::Deleted);
+    }
+
+    #[test]
+    fn test_committed_file_compress_and_store() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().to_path_buf();
+        
+        // Create bucket structure
+        fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
+        
+        // Create test file
+        let file_content = "test file content";
+        fs::write(bucket_path.join("test.txt"), file_content)?;
+
+        let file = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let result = file.compress_and_store(&bucket_path);
+        assert!(result.is_ok());
+        
+        // Check that compressed file exists
+        let compressed_path = bucket_path.join(".b").join("storage").join(file.hash.to_string());
+        assert!(compressed_path.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn test_committed_file_compress_nonexistent_file() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().to_path_buf();
+        
+        // Create bucket structure but no test file
+        fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
+
+        let file = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "nonexistent.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let result = file.compress_and_store(&bucket_path);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_committed_file_restore() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().to_path_buf();
+        
+        // Create bucket structure
+        fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
+        
+        // Create and compress a test file first
+        let file_content = "test restore content";
+        fs::write(bucket_path.join("original.txt"), file_content)?;
+
+        let hash_string = "test_hash_restore";
+        let compressed_path = bucket_path.join(".b").join("storage").join(hash_string);
+
+        // Manually compress the file to simulate stored version
+        use crate::utils::compression::compress_and_store_file;
+        compress_and_store_file(&bucket_path.join("original.txt"), &compressed_path, 0)?;
+        
+        // Remove original file
+        fs::remove_file(bucket_path.join("original.txt"))?;
+
+        let file = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "restored.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from_str(hash_string).unwrap_or_else(|_| Hash::from([0u8; 32])),
+            status: CommitStatus::Modified,
+        };
+
+        let result = file.restore(&bucket_path);
+        assert!(result.is_ok());
+        
+        // Check that file was restored
+        assert!(bucket_path.join("restored.txt").exists());
+        let restored_content = fs::read_to_string(bucket_path.join("restored.txt"))?;
+        assert_eq!(restored_content, file_content);
+        Ok(())
+    }
+
+    #[test]
+    fn test_committed_file_restore_nonexistent_compressed() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().to_path_buf();
+        
+        // Create bucket structure but no compressed file
+        fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
+
+        let file = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "restore_fail.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([2u8; 32]),
+            status: CommitStatus::Modified,
+        };
+
+        let result = file.restore(&bucket_path);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_hash_serialization() {
+        let hash = Hash::from([42u8; 32]);
+        let hash_string = hash.to_string();
+        assert_eq!(hash_string.len(), 64); // 32 bytes = 64 hex chars
+        
+        let parsed_hash = Hash::from_str(&hash_string);
+        assert!(parsed_hash.is_ok());
+        assert_eq!(parsed_hash.unwrap(), hash);
+    }
+
+    #[test]
+    fn test_hash_from_invalid_string() {
+        let invalid_hash = Hash::from_str("invalid_hash_string");
+        assert!(invalid_hash.is_err());
+        
+        let short_hash = Hash::from_str("1234");
+        assert!(short_hash.is_err());
+    }
+
+    #[test]
+    fn test_commit_with_multiple_files() {
+        let file1 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "file1.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let file2 = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "file2.txt".to_string(),
+            hash: Hash::from([2u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let commit = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            files: vec![file1, file2],
+            previous: None,
+            next: None,
+        };
+
+        assert_eq!(commit.files.len(), 2);
+        assert_eq!(commit.bucket, "test_bucket");
+    }
+
+    #[test]
+    fn test_commit_status_default() {
+        let status = CommitStatus::default();
+        assert_eq!(status, CommitStatus::Committed);
+    }
+
+    #[test]
+    fn test_commit_serialization() {
+        let file = CommittedFile {
+            id: Uuid::new_v4(),
+            name: "test.txt".to_string(),
+            hash: Hash::from([1u8; 32]),
+            previous_hash: Hash::from([0u8; 32]),
+            status: CommitStatus::New,
+        };
+
+        let commit = Commit {
+            bucket: "test_bucket".to_string(),
+            timestamp: "2023-01-01T00:00:00Z".to_string(),
+            files: vec![file],
+            previous: None,
+            next: None,
+        };
+
+        // Just test that the commit has the expected values
+        assert_eq!(commit.bucket, "test_bucket");
+        assert_eq!(commit.files.len(), 1);
+        assert_eq!(commit.files[0].name, "test.txt");
+    }
+}

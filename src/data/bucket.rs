@@ -239,4 +239,181 @@ mod tests {
         assert_eq!(bucket_default, bucket);
         Ok(())
     }
+
+    #[test]
+    fn test_bucket_serialization_roundtrip() {
+        let bucket = Bucket {
+            id: Uuid::new_v4(),
+            name: "test_bucket".to_string(),
+            relative_bucket_path: PathBuf::from("path/to/bucket"),
+        };
+
+        let toml_string = toml::to_string(&bucket).expect("Failed to serialize bucket");
+        let deserialized: Bucket = toml::from_str(&toml_string).expect("Failed to deserialize bucket");
+
+        assert_eq!(bucket.id, deserialized.id);
+        assert_eq!(bucket.name, deserialized.name);
+        assert_eq!(bucket.relative_bucket_path, deserialized.relative_bucket_path);
+    }
+
+    #[test]
+    fn test_bucket_from_meta_data_invalid_path() {
+        let nonexistent_path = PathBuf::from("/definitely/does/not/exist");
+        let result = Bucket::from_meta_data(&nonexistent_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bucket_from_meta_data_no_info_file() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("bucket_no_info");
+        let bucket_meta_path = bucket_path.join(".b");
+        create_dir_all(&bucket_meta_path)?;
+
+        let result = Bucket::from_meta_data(&bucket_path);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_bucket_from_meta_data_corrupted_info() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("bucket_corrupted");
+        let bucket_meta_path = bucket_path.join(".b");
+        create_dir_all(&bucket_meta_path)?;
+
+        // Write invalid TOML to info file
+        let info_path = bucket_meta_path.join("info");
+        std::fs::write(&info_path, "invalid toml content { [ ] }")?;
+
+        let result = Bucket::from_meta_data(&bucket_path);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_bucket_write_info_permission_denied() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("bucket_readonly");
+        let bucket_meta_path = bucket_path.join(".b");
+        create_dir_all(&bucket_meta_path)?;
+
+        let bucket = Bucket::default(Uuid::new_v4(), &"test".to_string(), &bucket_path);
+
+        // Make directory read-only on Unix systems
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = std::fs::metadata(&bucket_meta_path)?.permissions();
+            perms.set_mode(0o444); // read-only
+            std::fs::set_permissions(&bucket_meta_path, perms)?;
+
+            let result = bucket.write_bucket_info();
+            
+            // Restore permissions for cleanup
+            let mut perms = std::fs::metadata(&bucket_meta_path)?.permissions();
+            perms.set_mode(0o755);
+            std::fs::set_permissions(&bucket_meta_path, perms)?;
+            
+            assert!(result.is_err());
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_bucket_get_full_bucket_path() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("test_bucket");
+        let bucket = Bucket::default(Uuid::new_v4(), &"test".to_string(), &bucket_path);
+
+        let full_path = bucket.get_full_bucket_path();
+        assert!(full_path.is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_bucket_list_files_empty_bucket() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("empty_bucket");
+        create_dir_all(&bucket_path)?;
+
+        let bucket = Bucket::default(Uuid::new_v4(), &"empty".to_string(), &bucket_path);
+        let files = bucket.list_files_with_metadata_in_bucket();
+        
+        assert!(files.is_ok());
+        assert!(files.unwrap().files.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_bucket_list_files_with_files() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("bucket_with_files");
+        create_dir_all(&bucket_path)?;
+
+        // Create test files
+        std::fs::write(bucket_path.join("file1.txt"), "content1")?;
+        std::fs::write(bucket_path.join("file2.txt"), "content2")?;
+        
+        // Create subdirectory with file
+        let sub_dir = bucket_path.join("subdir");
+        create_dir_all(&sub_dir)?;
+        std::fs::write(sub_dir.join("file3.txt"), "content3")?;
+
+        let bucket = Bucket::default(Uuid::new_v4(), &"test".to_string(), &bucket_path);
+        let result = bucket.list_files_with_metadata_in_bucket();
+        
+        assert!(result.is_ok());
+        let files = result.unwrap();
+        assert_eq!(files.files.len(), 3);
+        
+        // Check that all files are present
+        let file_names: Vec<&str> = files.files.iter().map(|f| f.name.as_str()).collect();
+        assert!(file_names.contains(&"file1.txt"));
+        assert!(file_names.contains(&"file2.txt"));
+        assert!(file_names.contains(&"subdir/file3.txt"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_bucket_info_invalid_path() {
+        let nonexistent_path = PathBuf::from("/definitely/does/not/exist");
+        let result = read_bucket_info(&nonexistent_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_read_bucket_info_valid_file() -> std::io::Result<()> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("valid_bucket");
+        let bucket_meta_path = bucket_path.join(".b");
+        create_dir_all(&bucket_meta_path)?;
+
+        // Create a valid bucket and write its info
+        let original_bucket = Bucket::default(Uuid::new_v4(), &"valid_bucket".to_string(), &bucket_path);
+        original_bucket.write_bucket_info()?;
+
+        // Read it back using the standalone function
+        let read_bucket = read_bucket_info(&bucket_path)?;
+        assert_eq!(original_bucket, read_bucket);
+        Ok(())
+    }
+
+    #[test]
+    fn test_bucket_fields() {
+        let uuid = Uuid::new_v4();
+        let name = "test_bucket".to_string();
+        let path = PathBuf::from("test/path");
+
+        let bucket = Bucket {
+            id: uuid,
+            name: name.clone(),
+            relative_bucket_path: path.clone(),
+        };
+
+        assert_eq!(bucket.id, uuid);
+        assert_eq!(bucket.name, name);
+        assert_eq!(bucket.relative_bucket_path, path);
+    }
 }
