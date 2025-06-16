@@ -108,6 +108,27 @@ impl Create {
         return Err(BucketError::NotInRepo);
     }
 
+    // Validate bucket name
+    if bucket_name.is_empty() {
+        return Err(BucketError::InvalidBucketName("cannot be empty".to_string()));
+    }
+    
+    if bucket_name == "." || bucket_name == ".." {
+        return Err(BucketError::InvalidBucketName("cannot be '.' or '..'".to_string()));
+    }
+    
+    if bucket_name.contains('/') || bucket_name.contains('\\') {
+        return Err(BucketError::InvalidBucketName("cannot contain path separators".to_string()));
+    }
+    
+    if bucket_name.contains('\0') {
+        return Err(BucketError::InvalidBucketName("cannot contain null characters".to_string()));
+    }
+    
+    if bucket_name.len() > 255 {
+        return Err(BucketError::InvalidBucketName("too long (maximum 255 characters)".to_string()));
+    }
+
     if bucket_location.exists() {
         if bucket_location.is_dir() && is_valid_bucket(&bucket_location) {
             return Err(BucketError::BucketAlreadyExists);

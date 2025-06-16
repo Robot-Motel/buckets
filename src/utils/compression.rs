@@ -149,6 +149,201 @@ mod tests {
 
         // Check if the restored file exists
         assert!(result_path.exists());
+    }
 
+    #[test]
+    fn test_compress_nonexistent_file() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let nonexistent_path = dir.path().join("does_not_exist.txt");
+        let output_path = dir.path().join("output.zst");
+
+        // Test compression of non-existent file
+        let result = compress_and_store_file(&nonexistent_path, &output_path, 3);
+        assert!(result.is_err());
+        
+        if let Err(e) = result {
+            assert_eq!(e.kind(), io::ErrorKind::NotFound);
+        }
+    }
+
+    #[test]
+    fn test_compress_to_invalid_directory() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let input_path = dir.path().join("input.txt");
+        let invalid_output_path = dir.path().join("nonexistent_dir").join("output.zst");
+
+        // Create input file
+        fs::write(&input_path, "test content").expect("Failed to write input file");
+
+        // Test compression to invalid output directory
+        let result = compress_and_store_file(&input_path, &invalid_output_path, 3);
+        assert!(result.is_err());
+        
+        if let Err(e) = result {
+            assert_eq!(e.kind(), io::ErrorKind::NotFound);
+        }
+    }
+
+    #[test] 
+    fn test_restore_nonexistent_file() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let nonexistent_compressed = dir.path().join("does_not_exist.zst");
+        let output_path = dir.path().join("output.txt");
+
+        // Test restoration of non-existent compressed file
+        let result = restore_file(&nonexistent_compressed, &output_path);
+        assert!(result.is_err());
+        
+        if let Err(e) = result {
+            assert_eq!(e.kind(), io::ErrorKind::NotFound);
+        }
+    }
+
+    #[test]
+    fn test_restore_invalid_compressed_file() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let fake_compressed = dir.path().join("fake.zst");
+        let output_path = dir.path().join("output.txt");
+
+        // Create fake compressed file (not actually compressed)
+        fs::write(&fake_compressed, "this is not compressed data").expect("Failed to write fake file");
+
+        // Test restoration of invalid compressed file
+        let result = restore_file(&fake_compressed, &output_path);
+        assert!(result.is_err());
+        // Should fail during decompression
+    }
+
+    #[test]
+    fn test_restore_to_readonly_directory() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let input_path = dir.path().join("input.txt");
+        let compressed_path = dir.path().join("compressed.zst");
+        
+        // Create readonly subdirectory
+        let readonly_dir = dir.path().join("readonly");
+        fs::create_dir_all(&readonly_dir).expect("Failed to create readonly dir");
+        
+        // Set readonly permissions (Unix-like systems)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&readonly_dir).expect("Failed to get metadata").permissions();
+            perms.set_mode(0o444); // readonly
+            fs::set_permissions(&readonly_dir, perms).expect("Failed to set permissions");
+        }
+
+        // Create and compress test file
+        fs::write(&input_path, "test content").expect("Failed to write input file");
+        compress_and_store_file(&input_path, &compressed_path, 3).expect("Failed to compress");
+
+        let readonly_output = readonly_dir.join("output.txt");
+        
+        // Test restoration to readonly directory (may fail on some systems)
+        let result = restore_file(&compressed_path, &readonly_output);
+        
+        // Restore directory permissions for cleanup
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&readonly_dir).expect("Failed to get metadata").permissions();
+            perms.set_mode(0o755); // writable
+            fs::set_permissions(&readonly_dir, perms).expect("Failed to restore permissions");
+        }
+        
+        // On some systems this might succeed, on others it might fail with PermissionDenied
+        if result.is_err() {
+            if let Err(e) = result {
+                assert!(e.kind() == io::ErrorKind::PermissionDenied || e.kind() == io::ErrorKind::NotFound);
+            }
+        }
+    }
+
+    #[test]
+    fn test_compress_empty_file() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let input_path = dir.path().join("empty.txt");
+        let output_path = dir.path().join("empty.zst");
+        let restored_path = dir.path().join("restored.txt");
+
+        // Create empty file
+        File::create(&input_path).expect("Failed to create empty file");
+
+        // Compress empty file
+        compress_and_store_file(&input_path, &output_path, 3).expect("Failed to compress empty file");
+        assert!(output_path.exists());
+
+        // Restore empty file
+        restore_file(&output_path, &restored_path).expect("Failed to restore empty file");
+        assert!(restored_path.exists());
+        
+        let restored_content = fs::read(&restored_path).expect("Failed to read restored file");
+        assert!(restored_content.is_empty());
+    }
+
+    #[test]
+    fn test_compression_with_different_levels() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        let input_path = dir.path().join("input.txt");
+        let test_content = "This is test content for compression level testing.".repeat(100);
+        
+        fs::write(&input_path, &test_content).expect("Failed to write test file");
+
+        // Test different compression levels
+        for level in [0, 1, 3, 9, 22] { // zstd supports levels 1-22, 0 is default
+            let output_path = dir.path().join(format!("output_level_{}.zst", level));
+            let restored_path = dir.path().join(format!("restored_level_{}.txt", level));
+
+            // Compress with specific level
+            let result = compress_and_store_file(&input_path, &output_path, level);
+            assert!(result.is_ok(), "Failed to compress with level {}", level);
+            assert!(output_path.exists());
+
+            // Restore and verify content
+            restore_file(&output_path, &restored_path).expect("Failed to restore");
+            let restored_content = fs::read_to_string(&restored_path).expect("Failed to read restored");
+            assert_eq!(restored_content, test_content);
+        }
+    }
+
+    #[test]
+    fn test_compression_roundtrip_various_data() {
+        let dir = tempdir().expect("Failed to create temp dir");
+        
+        let binary_data = (0u8..=255u8).cycle().take(1000).collect::<Vec<u8>>();
+        let binary_string = String::from_utf8_lossy(&binary_data);
+        let repeated_string = "A".repeat(10000);
+        
+        let test_cases = vec![
+            ("text", "Hello, world! This is a test string with various characters: 你好世界 🌍"),
+            ("binary", binary_string.as_ref()),
+            ("repeated", repeated_string.as_str()),
+            ("json", r#"{"name": "test", "value": 42, "items": [1, 2, 3, {"nested": true}]}"#),
+            ("whitespace", "   \t\n\r  \n\n  \t  "),
+        ];
+
+        for (name, content) in test_cases {
+            let input_path = dir.path().join(format!("input_{}.txt", name));
+            let compressed_path = dir.path().join(format!("compressed_{}.zst", name));
+            let restored_path = dir.path().join(format!("restored_{}.txt", name));
+
+            // Write test content
+            fs::write(&input_path, content).expect("Failed to write test content");
+
+            // Compress
+            compress_and_store_file(&input_path, &compressed_path, 3)
+                .expect("Failed to compress test content");
+            assert!(compressed_path.exists());
+
+            // Restore
+            restore_file(&compressed_path, &restored_path)
+                .expect("Failed to restore test content");
+            assert!(restored_path.exists());
+
+            // Verify content matches
+            let restored_content = fs::read_to_string(&restored_path)
+                .expect("Failed to read restored content");
+            assert_eq!(restored_content, content, "Content mismatch for test case: {}", name);
+        }
     }
 }
