@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{self, BufReader, BufWriter};
+use std::io::{BufReader, BufWriter};
 use std::path::PathBuf;
 use log::{debug, error};
 use crate::args::RestoreCommand;
@@ -7,7 +7,7 @@ use crate::CURRENT_DIR;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::errors::BucketError;
 use crate::utils::checks;
-use crate::utils::utils::{connect_to_db, find_bucket_path};
+use crate::utils::utils::{find_bucket_path, with_db_connection};
 use crate::commands::BucketCommand;
 
 /// Restore a file from the last commit
@@ -36,33 +36,35 @@ impl BucketCommand for Restore {
 
     let bucket = Bucket::from_meta_data(&current_dir)?;
 
-    // Get the file's hash from the last commit
-    let connection = connect_to_db()?;
-    let mut stmt = connection.prepare(
-        "SELECT f.hash 
-        FROM files f
-        JOIN commits c ON f.commit_id = c.id
-        WHERE f.file_path = ?1
-        AND c.created_at = (
-            SELECT MAX(created_at) 
-            FROM commits 
-            WHERE bucket_id = ?2
-        )"
-    )?;
-        let file_path = self.args.file.clone();
-    let relative_path = PathBuf::from(&file_path)
-        .strip_prefix(&bucket_path)
-        .unwrap_or(&PathBuf::from(&file_path))
-        .to_string_lossy()
-        .to_string();
-    let rows = stmt.query_map([&relative_path, &bucket.id.to_string()], |row| {
-        row.get::<_, String>(0)
-    })?;
+    let file_path = self.args.file.clone();
+    
+    // Get the file's hash from the last commit using a shared connection
+    let hash = with_db_connection(|connection| {
+        let mut stmt = connection.prepare(
+            "SELECT f.hash 
+            FROM files f
+            JOIN commits c ON f.commit_id = c.id
+            WHERE f.file_path = ?1
+            AND c.created_at = (
+                SELECT MAX(created_at) 
+                FROM commits 
+                WHERE bucket_id = ?2
+            )"
+        )?;
+        let relative_path = PathBuf::from(&file_path)
+            .strip_prefix(&bucket_path)
+            .unwrap_or(&PathBuf::from(&file_path))
+            .to_string_lossy()
+            .to_string();
+        let rows = stmt.query_map([&relative_path, &bucket.id.to_string()], |row| {
+            row.get::<_, String>(0)
+        })?;
 
-    let hash = match rows.last() {
-        Some(Ok(hash)) => hash,
-        _ => return Err(BucketError::FileNotFound(file_path)),
-    };
+        match rows.last() {
+            Some(Ok(hash)) => Ok(hash),
+            _ => Err(BucketError::FileNotFound(file_path.clone())),
+        }
+    })?;
 
     // Construct paths
     let storage_path = bucket_path.join(".b").join("storage").join(&hash);
@@ -71,17 +73,13 @@ impl BucketCommand for Restore {
     debug!("Restoring {} from {}", target_path.display(), storage_path.display());
 
     // Decompress and copy the file from storage
-        self.decompress_and_restore_file(&storage_path, &target_path)
+    self.decompress_and_restore_file(&storage_path, &target_path)
         .map_err(|e| {
             error!("Failed to restore file: {}", e);
             BucketError::from(e)
         })?;
 
     println!("Restored {}", file_path);
-    if let Err((_conn, e)) = connection.close() {
-        return Err(BucketError::from(
-            io::Error::new(io::ErrorKind::Other, format!("Failed to close database connection: {}", e))));
-    }
     Ok(())
     }
 }

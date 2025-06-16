@@ -3,7 +3,7 @@ use crate::commands::BucketCommand;
 use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit as CommitData, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file};
+use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file, with_db_connection};
 use crate::world::World;
 use blake3::Hash;
 use duckdb::params;
@@ -104,21 +104,24 @@ impl Commit {
         files: &[CommittedFile],
         message: &String,
     ) -> Result<(), BucketError> {
-        // Insert the commit into the database
-        let commit_id = self.insert_commit_into_db(bucket_id, message)?;
+        // Use a single connection for all database operations
+        with_db_connection(|connection| {
+            // Insert the commit into the database
+            let commit_id = self.insert_commit_into_db_with_connection(connection, bucket_id, message)?;
 
-        // Process each file in the commit
-        for file in files {
+            // Process each file in the commit using the same connection
+            for file in files {
+                // Insert the file into the database
+                self.insert_file_into_db_with_connection(connection, &commit_id, &file.name, &file.hash.to_string())?;
 
-            // Insert the file into the database
-            self.insert_file_into_db(&commit_id, &file.name, &file.hash.to_string())?;
-
-            file.compress_and_store(&bucket_path).map_err(|e| {
-                error!("Error compressing and storing file: {}", e);
-                e
-            })?;
-        }
-        Ok(())
+                // Compress and store the file (no database operation)
+                file.compress_and_store(&bucket_path).map_err(|e| {
+                    error!("Error compressing and storing file: {}", e);
+                    e
+                })?;
+            }
+            Ok(())
+        })
     }
 
     fn insert_file_into_db(
@@ -185,7 +188,57 @@ impl Commit {
         result
     }
 
+    // New methods that accept database connections to avoid repeated connection creation
 
+    fn insert_file_into_db_with_connection(
+        &self,
+        connection: &duckdb::Connection,
+        commit_id: &str,
+        file_path: &str,
+        hash: &str,
+    ) -> Result<(), BucketError> {
+        connection.execute(
+        "INSERT INTO files (id, commit_id, file_path, hash) VALUES (gen_random_uuid(), ?1, ?2, ?3)",
+        [commit_id, file_path, hash],
+    )
+        .map_err(|e| {
+            BucketError::from(Error::new(
+                ErrorKind::Other,
+                format!("Error inserting into database: {}, commit id: {}, file path: {}, hash: {}", e, commit_id, file_path, hash),
+            ))
+        })?;
+        Ok(())
+    }
+
+    fn insert_commit_into_db_with_connection(
+        &self,
+        connection: &duckdb::Connection,
+        bucket_id: Uuid,
+        message: &String,
+    ) -> Result<String, BucketError> {
+        debug!(
+            "CommitCommand: path to database {}",
+            connection
+                .path()
+                .ok_or_else(|| BucketError::from(Error::new(
+                    ErrorKind::Other, 
+                    "Invalid database connection path".to_string()
+                )))?
+                .display()
+        );
+        // Now query back the `id` using the `rowid`
+        let stmt = &mut connection.prepare("INSERT INTO commits (id, bucket_id, message) VALUES (gen_random_uuid(), ?1, ?2) RETURNING id")?;
+        let rows = &mut stmt.query(params![
+            bucket_id.to_string().to_uppercase(),
+            message.clone()
+        ])?;
+
+        if let Some(row) = rows.next()? {
+            Ok(row.get(0)?)
+        } else {
+            Err(BucketError::from(duckdb::Error::QueryReturnedNoRows))
+        }
+    }
 
     fn list_files_with_metadata_in_bucket(&self, bucket_path: PathBuf) -> io::Result<CommitData> {
         let mut files = Vec::new();
