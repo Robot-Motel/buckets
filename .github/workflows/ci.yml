@@ -25,9 +25,8 @@ jobs:
 
       - name: Install Rustup using win.rustup.rs
         run: |
-          $env:RUSTUP_ARCH = ${{ matrix.rustup_arch || 'x86_64' }}
-          Invoke-WebRequest "https://win.rustup.rs/${env:RUSTUP_ARCH}" -OutFile rustup-init.exe
-          .\rustup-init.exe -y --default-host=${env:RUSTUP_ARCH}-pc-windows-msvc --profile=minimal
+          Invoke-WebRequest "https://win.rustup.rs/x86_64" -OutFile rustup-init.exe
+          .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc --profile=minimal
           rustup toolchain install stable --profile minimal
           del rustup-init.exe
 
