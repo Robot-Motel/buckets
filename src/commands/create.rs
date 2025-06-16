@@ -108,6 +108,42 @@ impl Create {
         return Err(BucketError::NotInRepo);
     }
 
+    // Validate bucket name
+    if bucket_name.is_empty() {
+        return Err(BucketError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Bucket name cannot be empty",
+        )));
+    }
+    
+    if bucket_name == "." || bucket_name == ".." {
+        return Err(BucketError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid bucket name",
+        )));
+    }
+    
+    if bucket_name.contains('/') || bucket_name.contains('\\') {
+        return Err(BucketError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Bucket name cannot contain path separators",
+        )));
+    }
+    
+    if bucket_name.contains('\0') {
+        return Err(BucketError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Bucket name cannot contain null characters",
+        )));
+    }
+    
+    if bucket_name.len() > 255 {
+        return Err(BucketError::IoError(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Bucket name too long",
+        )));
+    }
+
     if bucket_location.exists() {
         if bucket_location.is_dir() && is_valid_bucket(&bucket_location) {
             return Err(BucketError::BucketAlreadyExists);
