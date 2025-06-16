@@ -17,6 +17,8 @@ pub enum BucketError {
     NotInBucket,
     #[error("Not a valid bucket")]
     NotAValidBucket,
+    #[error("Invalid bucket name: {0}")]
+    InvalidBucketName(String),
     #[error("Invalid data {0}")]
     InvalidData(String),
     #[error("Not found {0}")]
@@ -36,6 +38,7 @@ impl BucketError {
             BucketError::NotInBucket => "Not in a bucket".to_string(),
             // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
             BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
+            BucketError::InvalidBucketName(message) => format!("Invalid bucket name: {}", message),
             BucketError::InvalidData(message) => format!("Invalid data {}", message),
             BucketError::NotFound(message) => format!("Not found {}", message),
             BucketError::FileNotFound(message) => format!("File not found {}", message),

@@ -110,38 +110,23 @@ impl Create {
 
     // Validate bucket name
     if bucket_name.is_empty() {
-        return Err(BucketError::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Bucket name cannot be empty",
-        )));
+        return Err(BucketError::InvalidBucketName("cannot be empty".to_string()));
     }
     
     if bucket_name == "." || bucket_name == ".." {
-        return Err(BucketError::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Invalid bucket name",
-        )));
+        return Err(BucketError::InvalidBucketName("cannot be '.' or '..'".to_string()));
     }
     
     if bucket_name.contains('/') || bucket_name.contains('\\') {
-        return Err(BucketError::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Bucket name cannot contain path separators",
-        )));
+        return Err(BucketError::InvalidBucketName("cannot contain path separators".to_string()));
     }
     
     if bucket_name.contains('\0') {
-        return Err(BucketError::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Bucket name cannot contain null characters",
-        )));
+        return Err(BucketError::InvalidBucketName("cannot contain null characters".to_string()));
     }
     
     if bucket_name.len() > 255 {
-        return Err(BucketError::IoError(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "Bucket name too long",
-        )));
+        return Err(BucketError::InvalidBucketName("too long (maximum 255 characters)".to_string()));
     }
 
     if bucket_location.exists() {
