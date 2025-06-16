@@ -48,7 +48,8 @@ impl BucketCommand for Create {
     match connection
         .execute(
             "INSERT INTO buckets (id, name, path, created_at) VALUES (gen_random_uuid(), ?1, ?2, ?3)",
-            [bucket_name, relative_path.to_str().expect("invalid string"), &timestamp],
+            [bucket_name, relative_path.to_str().ok_or_else(|| 
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid path string"))?, &timestamp],
         )
         .map_err(|e| {
             std::io::Error::new(
@@ -73,7 +74,8 @@ impl BucketCommand for Create {
         })?;
 
     let bucket_id_str: String = stmt
-        .query_row([bucket_name, relative_path.to_str().expect("invalid string")], |row| {
+        .query_row([bucket_name, relative_path.to_str().ok_or_else(|| 
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "Invalid path string"))?], |row| {
             row.get(0)
         })
         .map_err(|e| {
@@ -90,7 +92,7 @@ impl BucketCommand for Create {
         )
     })?;
     let bucket = Bucket::default(bucket_id, bucket_name, &relative_path);
-    bucket.write_bucket_info();
+    bucket.write_bucket_info().map_err(|e| BucketError::from(e))?;
 
     Ok(())
     }

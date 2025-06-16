@@ -27,7 +27,7 @@ impl RepositoryConfig {
         file.read_to_string(&mut toml_string)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))?;
 
-        Ok(toml::from_str(&toml_string).expect("Failed to parse toml string"))
+        toml::from_str(&toml_string).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
     }
 }
 

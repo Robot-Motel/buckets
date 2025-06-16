@@ -118,7 +118,9 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
                 .iter()
                 .filter(|change| change.status == CommitStatus::Modified)
                 .for_each(|change| {
-                    change.restore(&bucket_path).expect("Failed to restore file.");
+                    if let Err(e) = change.restore(&bucket_path) {
+                        error!("Failed to restore file: {}", e);
+                    }
                 });
         }
         Err(_) => {

@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{self, BufReader, BufWriter};
 use std::path::PathBuf;
 use log::{debug, error};
 use crate::args::RestoreCommand;
@@ -78,7 +78,10 @@ impl BucketCommand for Restore {
         })?;
 
     println!("Restored {}", file_path);
-    connection.close().expect("failed to close connection");
+    if let Err((_conn, e)) = connection.close() {
+        return Err(BucketError::from(
+            io::Error::new(io::ErrorKind::Other, format!("Failed to close database connection: {}", e))));
+    }
     Ok(())
     }
 }

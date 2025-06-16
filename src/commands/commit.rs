@@ -138,7 +138,12 @@ impl Commit {
                 format!("Error inserting into database: {}, commit id: {}, file path: {}, hash: {}", e, commit_id, file_path, hash),
             )
         })?;
-        connection.close().expect("failed to close connection");
+        if let Err((_conn, e)) = connection.close() {
+            return Err(BucketError::from(Error::new(
+                ErrorKind::Other, 
+                format!("Failed to close database connection: {}", e)
+            )));
+        }
         Ok(())
     }
 
@@ -152,14 +157,17 @@ impl Commit {
             "CommitCommand: path to database {}",
             connection
                 .path()
-                .expect("invalid connection path")
+                .ok_or_else(|| BucketError::from(Error::new(
+                    ErrorKind::Other, 
+                    "Invalid database connection path".to_string()
+                )))?
                 .display()
         );
         // Now query back the `id` using the `rowid`
         let stmt = &mut connection.prepare("INSERT INTO commits (id, bucket_id, message) VALUES (gen_random_uuid(), ?1, ?2) RETURNING id")?;
         let rows = &mut stmt.query(params![
             bucket_id.to_string().to_uppercase(),
-            message.parse::<String>().unwrap()
+            message.clone()
         ])?;
 
         let result = if let Some(row) = rows.next()? {
@@ -168,7 +176,12 @@ impl Commit {
             Err(BucketError::from(duckdb::Error::QueryReturnedNoRows))
         };
         
-        connection.close().expect("failed to close connection");
+        if let Err((_conn, e)) = connection.close() {
+            return Err(BucketError::from(Error::new(
+                ErrorKind::Other, 
+                format!("Failed to close database connection: {}", e)
+            )));
+        }
         result
     }
 
@@ -191,7 +204,8 @@ impl Commit {
                             previous_hash: Hash::from_str(
                                 "0000000000000000000000000000000000000000000000000000000000000000",
                             )
-                            .expect("invalid hash"),
+                            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, 
+                                format!("Invalid hash format: {}", e)))?,
                             status: CommitStatus::Unknown,
                         });
                     }
@@ -232,18 +246,26 @@ impl Commit {
             let hex_string: String = row.get(2)?;
 
             files.push(CommittedFile {
-                id: Uuid::parse_str(&uuid_string).expect("invalid uuid"),
+                id: Uuid::parse_str(&uuid_string).map_err(|e| BucketError::from(
+                    Error::new(ErrorKind::InvalidData, format!("Invalid UUID: {}", e))))?,
                 name: row.get(1)?,
-                hash: Hash::from_hex(&hex_string).expect("invalid hash"),
+                hash: Hash::from_hex(&hex_string).map_err(|e| BucketError::from(
+                    Error::new(ErrorKind::InvalidData, format!("Invalid hash: {}", e))))?,
                 previous_hash: Hash::from_str(
                     "0000000000000000000000000000000000000000000000000000000000000000",
                 )
-                .expect("invalid hash"), // TODO: Implement previous hash
+                .map_err(|e| BucketError::from(Error::new(ErrorKind::InvalidData, 
+                    format!("Invalid hash format: {}", e))))?, // TODO: Implement previous hash
                 status: CommitStatus::Committed,
             });
         }
 
-        connection.close().expect("failed to close connection");
+        if let Err((_conn, e)) = connection.close() {
+            return Err(BucketError::from(Error::new(
+                ErrorKind::Other, 
+                format!("Failed to close database connection: {}", e)
+            )));
+        }
 
         Ok(Some(CommitData {
             bucket: bucket_name,
@@ -294,9 +316,9 @@ mod tests {
 
         let bucket_dir = repo_dir.join("test_bucket");
         let file_path = bucket_dir.join("test_file.txt");
-        let mut file = File::create(&file_path).expect("invalid file");
-        file.write_all(b"test").expect("invalid write");
-        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("invalid command");
+        let mut file = File::create(&file_path).expect("Failed to create test file");
+        file.write_all(b"test").expect("Failed to write test data");
+        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("Failed to find buckets binary");
         cmd3.current_dir(bucket_dir.as_path())
             .arg("commit")
             .arg("test message")
@@ -306,7 +328,7 @@ mod tests {
         // Bucket id is stored in the bucket info file
         // Can be read first to get the bucket id and then use
         // to query the database
-        let bucket = read_bucket_info(&bucket_dir).expect("invalid bucket info");
+        let bucket = read_bucket_info(&bucket_dir).expect("Failed to read bucket info");
 
         let commit_message = "Test commit".to_string();
         let committed_file = CommittedFile {
@@ -315,16 +337,16 @@ mod tests {
             hash: Hash::from_str(
                 "f4315de648c8440fb2539fe9a8417e901ab270a37c6e2267e0c5fffe7d4d4419",
             )
-            .expect("invalid hash"),
+            .expect("Failed to create test hash"),
             previous_hash: Hash::from_str(
                 "0000000000000000000000000000000000000000000000000000000000000000",
             )
-            .expect("invalid hash"),
+            .expect("Failed to create zero hash"),
             status: CommitStatus::New,
         };
 
         // change to bucket directory
-        env::set_current_dir(&bucket_dir).expect("invalid directory");
+        env::set_current_dir(&bucket_dir).expect("Failed to change to bucket directory");
 
         let commit_cmd = Commit::new(&crate::args::CommitCommand {
             shared: crate::args::SharedArguments::default(),

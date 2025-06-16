@@ -134,7 +134,8 @@ impl Commit {
                         id: file.id,
                         name: file.name.clone(),
                         hash: file.hash.clone(),
-                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("Failed to create hash"),
+                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                            .unwrap_or_else(|_| Hash::from([0u8; 32])),
                         status: CommitStatus::New,
                     });
                 }
@@ -154,7 +155,8 @@ impl Commit {
                             id: other_file.id,
                             name: other_file.name.clone(),
                             hash: other_file.hash.clone(),
-                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("Failed to create hash"),
+                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                            .unwrap_or_else(|_| Hash::from([0u8; 32])),
                             status: CommitStatus::Deleted,
                         });
                     }
