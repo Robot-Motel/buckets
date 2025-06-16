@@ -1,5 +1,5 @@
 use std::env;
-use std::io::{Error, ErrorKind};
+use std::io::{self, Error, ErrorKind};
 use duckdb::Connection;
 use log::error;
 use crate::args::StatusCommand;
@@ -35,7 +35,8 @@ impl BucketCommand for Status {
         if !checks::is_valid_bucket(&current_dir) {
             self.repository_status()
         } else {
-            let bucket_path = find_bucket_path(&current_dir).expect("this _should_ be a valid bucket");
+            let bucket_path = find_bucket_path(&current_dir)
+                .ok_or_else(|| BucketError::NotAValidBucket)?;
 
             let bucket = match Bucket::from_meta_data(&bucket_path) {
                 Ok(bucket) => bucket,
@@ -45,7 +46,7 @@ impl BucketCommand for Status {
                 }
             };
             self.bucket_status(&bucket)
-        }.expect("TODO: panic message");
+        }?;
 
         Ok(())
     }
@@ -87,7 +88,9 @@ impl Status {
     }
 
     fn repository_status(&self) -> Result<(), BucketError> {
-        let repo_config = RepositoryConfig::from_file(env::current_dir().expect("invalid dir"))?;
+        let current_dir = env::current_dir().map_err(|e| BucketError::from(
+            io::Error::new(io::ErrorKind::Other, format!("Failed to get current directory: {}", e))))?;
+        let repo_config = RepositoryConfig::from_file(current_dir)?;
         println!("Repository config: {:?}", repo_config);
         let buckets = self.query_buckets().map_err(|e| BucketError::from(e))?;
         println!("Number of buckets: {:?}", buckets.len());
@@ -96,8 +99,13 @@ impl Status {
     }
 
     fn query_buckets(&self) -> Result<Vec<Bucket>, BucketError> {
-        let db_path = find_directory_in_parents(&env::current_dir().expect("invalid dir"), ".buckets").expect("invalid dir").join("buckets.db");
-        let connection = Connection::open(db_path).expect("failed to open database");
+        let current_dir = env::current_dir().map_err(|e| BucketError::from(
+            io::Error::new(io::ErrorKind::Other, format!("Failed to get current directory: {}", e))))?;
+        let db_path = find_directory_in_parents(&current_dir, ".buckets")
+            .ok_or_else(|| BucketError::NotInRepo)?
+            .join("buckets.db");
+        let connection = Connection::open(db_path).map_err(|e| BucketError::from(
+            io::Error::new(io::ErrorKind::Other, format!("Failed to open database: {}", e))))?;
         let mut stmt = connection.prepare("SELECT id, name, path FROM buckets").map_err(|e| BucketError::from(e))?;
         let bucket_iter = stmt.query_map([], |row| {
             let uuid_str: String = row.get(0)?;

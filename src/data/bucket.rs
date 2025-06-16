@@ -23,7 +23,7 @@ pub struct Bucket {
 pub trait BucketTrait {
     fn default(uuid: Uuid, name: &String, path: &PathBuf) -> Self;
     fn from_meta_data(current_path: &PathBuf) -> Result<Bucket, BucketError>;
-    fn write_bucket_info(&self);
+    fn write_bucket_info(&self) -> Result<(), io::Error>;
     fn is_valid_bucket(dir_path: &Path) -> bool;
     fn find_bucket(dir_path: &Path) -> Option<PathBuf>;
     fn get_full_bucket_path(&self) -> Result<PathBuf, BucketError>;
@@ -66,9 +66,12 @@ impl BucketTrait for Bucket {
         Ok(bucket)
     }
 
-    fn write_bucket_info(&self) {
-        let mut file = File::create(self.relative_bucket_path.join(".b").join("info")).expect("Failed to create bucket info file");
-        file.write_fmt(format_args!("{}", to_string(self).expect("Failed to serialize bucket info"))).expect("Failed to write bucket info");
+    fn write_bucket_info(&self) -> Result<(), io::Error> {
+        let mut file = File::create(self.relative_bucket_path.join(".b").join("info"))?;
+        let serialized = to_string(self)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+        file.write_fmt(format_args!("{}", serialized))?;
+        Ok(())
     }
 
     fn is_valid_bucket(dir_path: &Path) -> bool {
@@ -156,12 +159,17 @@ impl BucketTrait for Bucket {
                 id: Uuid::parse_str(&uuid_string).map_err(|e| BucketError::InvalidData(e.to_string()))?,
                 name: row.get(1)?,
                 hash: Hash::from_hex(&hex_string).map_err(|e| BucketError::InvalidData(e.to_string()))?,
-                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000").expect("Failed to create hash"),
+                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                    .map_err(|e| BucketError::InvalidData(e.to_string()))?,
                 status: CommitStatus::Committed,
             });
         }
 
-        connection.close().expect("failed to close connection");
+        if let Err((_conn, e)) = connection.close() {
+            return Err(BucketError::from(
+                io::Error::new(io::ErrorKind::Other, format!("Failed to close database connection: {}", e))
+            ));
+        }
 
         Ok(Some(Commit {
             bucket: self.name.clone(),
@@ -180,7 +188,7 @@ pub fn read_bucket_info(path: &PathBuf) -> Result<Bucket, std::io::Error> {
             e.kind(),
             format!(
                 "Failed to open {} file: {}",
-                &info_path.as_os_str().to_str().expect("Failed to convert path to string"),
+                &info_path.as_os_str().to_str().unwrap_or("<invalid path>"),
                 e
             ),
         )
@@ -221,7 +229,7 @@ mod tests {
         create_dir_all(&bucket_meta_path)?;
 
         let bucket_default = Bucket::default(Uuid::new_v4(), &bucket_name, &bucket_path);
-        bucket_default.write_bucket_info();
+        bucket_default.write_bucket_info().expect("Failed to write bucket info in test");
 
         let bucket = match Bucket::from_meta_data(&bucket_path) {
             Ok(bucket) => bucket,
