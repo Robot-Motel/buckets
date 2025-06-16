@@ -137,8 +137,17 @@ where
 {
     let connection = connect_to_db()?;
     let result = f(&connection);
-    close_connection(connection)?;
-    result
+    match close_connection(connection) {
+        Ok(()) => result,
+        Err(close_err) => {
+            // If the original operation failed, return that error
+            // Otherwise, return the close error
+            match result {
+                Ok(_) => Err(close_err),
+                Err(original_err) => Err(original_err),
+            }
+        }
+    }
 }
 
 #[cfg(test)]
