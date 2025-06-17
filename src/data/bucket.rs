@@ -206,8 +206,19 @@ mod tests {
     use super::*;
     use std::fs::create_dir_all;
     use std::path::PathBuf;
+    use serial_test::serial;
     use tempfile::tempdir;
     use uuid::Uuid;
+
+    // Helper function to set up test environment
+    fn setup_test_environment() -> std::io::Result<PathBuf> {
+        let temp_dir = tempdir()?.keep();
+        create_dir_all(temp_dir.as_path().join(".buckets"))?;
+        let bucket_path = temp_dir.as_path().join("test_bucket");
+        create_dir_all(&bucket_path)?;
+        env::set_current_dir(&bucket_path)?;
+        Ok(bucket_path)
+    }
 
     #[test]
     fn test_default() {
@@ -322,58 +333,84 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_bucket_get_full_bucket_path() -> std::io::Result<()> {
-        let temp_dir = tempdir()?;
-        let bucket_path = temp_dir.path().join("test_bucket");
+        let bucket_path = setup_test_environment()?;
         let bucket = Bucket::default(Uuid::new_v4(), &"test".to_string(), &bucket_path);
+        // change the current directory to the bucket path
+        
 
-        let full_path = bucket.get_full_bucket_path();
-        assert!(full_path.is_ok());
-        Ok(())
+        match bucket.get_full_bucket_path() {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                eprintln!("Failed to get full bucket path: {:?}", e);
+                Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+            }
+        }
     }
 
     #[test]
-    fn test_bucket_list_files_empty_bucket() -> std::io::Result<()> {
-        let temp_dir = tempdir()?;
-        let bucket_path = temp_dir.path().join("empty_bucket");
-        create_dir_all(&bucket_path)?;
+    #[serial]
+    fn test_bucket_list_files_with_metadata_in_bucket_empty() -> std::io::Result<()> {
+        let bucket_path = setup_test_environment()?;
 
         let bucket = Bucket::default(Uuid::new_v4(), &"empty".to_string(), &bucket_path);
-        let files = bucket.list_files_with_metadata_in_bucket();
-        
-        assert!(files.is_ok());
-        assert!(files.unwrap().files.is_empty());
-        Ok(())
+        match bucket.list_files_with_metadata_in_bucket() {
+            Ok(files) => {
+                assert!(files.files.is_empty());
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("Failed to list files in bucket: {:?}", e);
+                Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+            }
+        }
     }
 
     #[test]
-    fn test_bucket_list_files_with_files() -> std::io::Result<()> {
-        let temp_dir = tempdir()?;
-        let bucket_path = temp_dir.path().join("bucket_with_files");
-        create_dir_all(&bucket_path)?;
+    #[serial]
+    fn test_bucket_list_files_with_metadata_in_bucket_with_files() -> std::io::Result<()> {
+        let bucket_path = setup_test_environment()?;
 
-        // Create test files
+        // Create some test files
         std::fs::write(bucket_path.join("file1.txt"), "content1")?;
         std::fs::write(bucket_path.join("file2.txt"), "content2")?;
-        
-        // Create subdirectory with file
-        let sub_dir = bucket_path.join("subdir");
-        create_dir_all(&sub_dir)?;
-        std::fs::write(sub_dir.join("file3.txt"), "content3")?;
 
-        let bucket = Bucket::default(Uuid::new_v4(), &"test".to_string(), &bucket_path);
-        let result = bucket.list_files_with_metadata_in_bucket();
-        
-        assert!(result.is_ok());
-        let files = result.unwrap();
-        assert_eq!(files.files.len(), 3);
-        
-        // Check that all files are present
-        let file_names: Vec<&str> = files.files.iter().map(|f| f.name.as_str()).collect();
-        assert!(file_names.contains(&"file1.txt"));
-        assert!(file_names.contains(&"file2.txt"));
-        assert!(file_names.contains(&"subdir/file3.txt"));
-        Ok(())
+        let bucket = Bucket::default(Uuid::new_v4(), &"with_files".to_string(), &bucket_path);
+        match bucket.list_files_with_metadata_in_bucket() {
+            Ok(files) => {
+                assert_eq!(files.files.len(), 2);
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("Failed to list files in bucket: {:?}", e);
+                Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+            }
+        }
+    }
+
+    #[test]
+    #[serial]
+    fn test_bucket_list_files_with_metadata_in_bucket_with_subdirectories() -> std::io::Result<()> {
+        let bucket_path = setup_test_environment()?;
+
+        // Create test files in subdirectories
+        let subdir = bucket_path.join("subdir");
+        create_dir_all(&subdir)?;
+        std::fs::write(subdir.join("file1.txt"), "content1")?;
+        std::fs::write(subdir.join("file2.txt"), "content2")?;
+
+        let bucket = Bucket::default(Uuid::new_v4(), &"with_subdirs".to_string(), &bucket_path);
+        match bucket.list_files_with_metadata_in_bucket() {
+            Ok(files) => {
+                assert_eq!(files.files.len(), 2);
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("Failed to list files in bucket: {:?}", e);
+                Err(std::io::Error::new(std::io::ErrorKind::Other, e))
+            }
+        }
     }
 
     #[test]

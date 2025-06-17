@@ -199,6 +199,7 @@ impl CommittedFile {
 mod tests {
     use super::*;
     use std::fs;
+    use serial_test::serial;
     use tempfile::tempdir;
     use uuid::Uuid;
 
@@ -427,6 +428,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_committed_file_restore() -> std::io::Result<()> {
         let temp_dir = tempdir()?;
         let bucket_path = temp_dir.path().to_path_buf();
@@ -439,7 +441,8 @@ mod tests {
         fs::write(bucket_path.join("original.txt"), file_content)?;
 
         let hash_string = "test_hash_restore";
-        let compressed_path = bucket_path.join(".b").join("storage").join(hash_string);
+        let hash = Hash::from_str(hash_string).unwrap_or_else(|_| Hash::from([0u8; 32]));
+        let compressed_path = bucket_path.join(".b").join("storage").join(hash.to_string());
 
         // Manually compress the file to simulate stored version
         use crate::utils::compression::compress_and_store_file;
