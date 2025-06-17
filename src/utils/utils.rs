@@ -26,8 +26,10 @@ pub(crate) fn find_files_excluding_top_level_b(dir: &Path) -> Vec<PathBuf> {
 
 fn is_not_in_dir(entry: &DirEntry, root_dir: &Path, excluded_dir: &str) -> bool {
     let is_top_level_ex_dir = entry.depth() == 1 && entry.file_name() == excluded_dir;
-    let is_inside_top_level_ex_dir = entry.path().starts_with(&root_dir.join(excluded_dir));
 
+    let root_exclude = root_dir.join(excluded_dir);
+
+    let is_inside_top_level_ex_dir = entry.path().starts_with(&root_exclude);
     entry.file_type().is_file() && !is_top_level_ex_dir && !is_inside_top_level_ex_dir
 }
 
@@ -154,6 +156,7 @@ where
 mod tests {
     use super::*;
     use std::fs::create_dir_all;
+    use serial_test::serial;
     use tempfile::tempdir;
 
     #[test]
@@ -339,6 +342,294 @@ mod tests {
         // Ensure we can execute a query
         conn.execute("SELECT 1;", []).expect("failed to execute query");
         conn.close().expect("failed to close connection");
+    }
+
+    #[test]
+    fn test_connect_to_db_invalid_database() {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let buckets_dir = temp_dir.path().join(".buckets");
+        fs::create_dir_all(&buckets_dir).expect("failed to create .buckets directory");
+        
+        // Create a corrupted database file
+        let db_path = buckets_dir.join("buckets.db");
+        fs::write(&db_path, "corrupted database content").expect("failed to write corrupted db");
+        
+        env::set_current_dir(&temp_dir).expect("failed to change directory");
+        
+        let result = connect_to_db();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_with_db_connection_success() {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let buckets_dir = temp_dir.path().join(".buckets");
+        fs::create_dir_all(&buckets_dir).expect("failed to create .buckets directory");
+        
+        let db_path = buckets_dir.join("buckets.db");
+        let conn = duckdb::Connection::open(&db_path).expect("failed to open database");
+        conn.execute("CREATE TABLE test (id INTEGER);", []).expect("failed to create table");
+        conn.close().expect("failed to close connection");
+        
+        env::set_current_dir(&temp_dir).expect("failed to change directory");
+        
+        let result = with_db_connection(|connection| {
+            connection.execute("SELECT 1;", [])?;
+            Ok(42)
+        });
+        
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 42);
+    }
+
+    #[test]
+    fn test_with_db_connection_error_propagation() {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let buckets_dir = temp_dir.path().join(".buckets");
+        fs::create_dir_all(&buckets_dir).expect("failed to create .buckets directory");
+        
+        let db_path = buckets_dir.join("buckets.db");
+        let conn = duckdb::Connection::open(&db_path).expect("failed to open database");
+        conn.close().expect("failed to close connection");
+        
+        env::set_current_dir(&temp_dir).expect("failed to change directory");
+        
+        let result: Result<i32, BucketError> = with_db_connection(|_connection| {
+            Err(BucketError::NotInRepo)
+        });
+        
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            BucketError::NotInRepo => {},
+            _ => panic!("Expected NotInRepo error"),
+        }
+    }
+
+    #[test]
+    fn test_hash_file_large_file() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let file_path = temp_dir.path().join("large_file.txt");
+        
+        // Create a 1MB file
+        let large_content = vec![b'A'; 1024 * 1024];
+        fs::write(&file_path, &large_content)?;
+        
+        let result = hash_file(&file_path);
+        assert!(result.is_ok());
+        
+        let hash = result.unwrap();
+        assert_ne!(hash, Hash::from([0u8; 32])); // Should not be zero hash
+        Ok(())
+    }
+
+    #[test]
+    fn test_hash_file_permission_denied() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let file_path = temp_dir.path().join("restricted_file.txt");
+        
+        fs::write(&file_path, "content")?;
+        
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&file_path)?.permissions();
+            perms.set_mode(0o000); // No permissions
+            fs::set_permissions(&file_path, perms)?;
+            
+            let result = hash_file(&file_path);
+            
+            // Restore permissions for cleanup
+            let mut perms = fs::metadata(&file_path)?.permissions();
+            perms.set_mode(0o644);
+            fs::set_permissions(&file_path, perms)?;
+            
+            assert!(result.is_err());
+        }
+        
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_find_files_permission_denied_directory() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let restricted_dir = temp_dir.path().join("restricted");
+        fs::create_dir_all(&restricted_dir)?;
+        env::set_current_dir(&restricted_dir)?;
+        
+        // Create a file in the restricted directory
+        fs::write(restricted_dir.join("file.txt"), "content")?;
+        
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut perms = fs::metadata(&restricted_dir)?.permissions();
+            perms.set_mode(0o000); // No permissions
+            fs::set_permissions(&restricted_dir, perms)?;
+            
+            let result = find_files_excluding_top_level_b(temp_dir.path());
+            
+            // Restore permissions for cleanup
+            let mut perms = fs::metadata(&restricted_dir)?.permissions();
+            perms.set_mode(0o755);
+            fs::set_permissions(&restricted_dir, perms)?;
+            
+            // Should complete without crashing, may or may not include the restricted file
+            assert!(!result.is_empty());
+        }
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_files_with_nested_b_directories() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+
+        // Create nested structure with a .b directory in the top level (top of the bucket, not the repo)
+        let nested_dir = temp_dir.path().join(".b").join("subdir").join("storage");
+        fs::create_dir_all(&nested_dir)?;
+        fs::write(nested_dir.join("file.txt"), "content")?;
+        
+        // Create normal files
+        fs::write(temp_dir.path().join("normal.txt"), "content")?;
+        fs::create_dir_all(temp_dir.path().join("subdir2"))?;
+        fs::write(temp_dir.path().join("subdir2").join("file2.txt"), "content2")?;
+        
+        let files = find_files_excluding_top_level_b(temp_dir.path());
+        
+        // Should find normal files but not files in .b directories
+        let file_names: Vec<String> = files.iter().map(|f| f.to_string_lossy().to_string()).collect();
+        assert!(file_names.contains(&"normal.txt".to_string()));
+        assert!(file_names.contains(&"subdir2/file2.txt".to_string()));
+        assert!(!file_names.iter().any(|name| name.contains(".b")));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_relative_path_edge_cases() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let base = temp_dir.path();
+        
+        // Test with same path
+        let result = make_relative_path(base, base);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), PathBuf::from(""));
+        
+        // Test with parent path
+        let parent = base.parent().unwrap();
+        let result = make_relative_path(parent, base);
+        assert!(result.is_none()); // Can't make parent relative to child
+        
+        // Test with unrelated path
+        let unrelated = PathBuf::from("/completely/different/path");
+        let result = make_relative_path(base, &unrelated);
+        // This should work or fail gracefully depending on the implementation
+        let _ = result; // Just ensure it doesn't panic
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_make_relative_path_file_to_base() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let base = temp_dir.path();
+        let sub_file = base.join("subdir").join("file.txt");
+        
+        fs::create_dir_all(sub_file.parent().unwrap())?;
+        fs::write(&sub_file, "content")?;
+        
+        let result = make_relative_path(&sub_file, base);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), PathBuf::from("subdir").join("file.txt"));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_bucket_repo_nested_case() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let buckets_dir = temp_dir.path().join(".buckets");
+        fs::create_dir_all(&buckets_dir)?;
+        
+        // Create deeply nested directory structure
+        let deep_nested = temp_dir.path().join("a").join("b").join("c").join("d");
+        fs::create_dir_all(&deep_nested)?;
+        
+        let result = find_bucket_repo(&deep_nested);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), buckets_dir);
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_find_bucket_repo_no_repo() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let no_repo_dir = temp_dir.path().join("no_repo");
+        fs::create_dir_all(&no_repo_dir)?;
+        
+        let result = find_bucket_repo(&no_repo_dir);
+        assert!(result.is_none());
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_db_path_no_repo() {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        env::set_current_dir(&temp_dir).expect("failed to change directory");
+        
+        let result = get_db_path();
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            BucketError::NotInRepo => {},
+            _ => panic!("Expected NotInRepo error"),
+        }
+    }
+
+    #[test]
+    fn test_get_db_path_success() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let buckets_dir = temp_dir.path().join(".buckets");
+        fs::create_dir_all(&buckets_dir)?;
+        
+        env::set_current_dir(&temp_dir).expect("failed to change directory");
+        
+        let result = get_db_path();
+        assert!(result.is_ok());
+        
+        let db_path = result.unwrap();
+        assert_eq!(db_path, buckets_dir.join("buckets.db"));
+        
+        Ok(())
+    }
+
+    #[test]
+    fn test_connect_to_db_with_path_invalid() {
+        let invalid_path = PathBuf::from("/definitely/does/not/exist/db.db");
+        let result = connect_to_db_with_path(&invalid_path);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_connect_to_db_with_path_valid() -> io::Result<()> {
+        let temp_dir = tempdir().expect("failed to create temp dir");
+        let db_path = temp_dir.path().join("test.db");
+        
+        // Create a valid database
+        let conn = duckdb::Connection::open(&db_path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        conn.execute("CREATE TABLE test (id INTEGER);", []).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let _ = conn.close(); // Ignore close result
+        
+        let result = connect_to_db_with_path(&db_path);
+        assert!(result.is_ok());
+        
+        let conn = result.unwrap();
+        conn.execute("SELECT 1;", []).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let _ = conn.close(); // Ignore close result
+        
+        Ok(())
     }
 
 }
