@@ -137,72 +137,7 @@ impl Commit {
         })
     }
 
-    fn insert_file_into_db(
-        &self,
-        commit_id: &str,
-        file_path: &str,
-        hash: &str,
-    ) -> Result<(), BucketError> {
-        let connection = connect_to_db()?;
-        let _ = connection.execute(
-        "INSERT INTO files (id, commit_id, file_path, hash) VALUES (gen_random_uuid(), ?1, ?2, ?3)",
-        [commit_id, file_path, hash],
-    )
-        .map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("Error inserting into database: {}, commit id: {}, file path: {}, hash: {}", e, commit_id, file_path, hash),
-            )
-        })?;
-        if let Err((_conn, e)) = connection.close() {
-            return Err(BucketError::from(Error::new(
-                ErrorKind::Other,
-                format!("Failed to close database connection: {}", e),
-            )));
-        }
-        Ok(())
-    }
-
-    fn insert_commit_into_db(
-        &self,
-        bucket_id: Uuid,
-        message: &String,
-    ) -> Result<String, BucketError> {
-        let connection = connect_to_db()?;
-        debug!(
-            "CommitCommand: path to database {}",
-            connection
-                .path()
-                .ok_or_else(|| BucketError::from(Error::new(
-                    ErrorKind::Other,
-                    "Invalid database connection path".to_string()
-                )))?
-                .display()
-        );
-        // Now query back the `id` using the `rowid`
-        let stmt = &mut connection.prepare("INSERT INTO commits (id, bucket_id, message) VALUES (gen_random_uuid(), ?1, ?2) RETURNING id")?;
-        let rows = &mut stmt.query(params![
-            bucket_id.to_string().to_uppercase(),
-            message.clone()
-        ])?;
-
-        let result = if let Some(row) = rows.next()? {
-            Ok(row.get(0)?)
-        } else {
-            Err(BucketError::from(duckdb::Error::QueryReturnedNoRows))
-        };
-
-        if let Err((_conn, e)) = connection.close() {
-            return Err(BucketError::from(Error::new(
-                ErrorKind::Other,
-                format!("Failed to close database connection: {}", e),
-            )));
-        }
-        result
-    }
-
     // New methods that accept database connections to avoid repeated connection creation
-
     fn insert_file_into_db_with_connection(
         &self,
         connection: &duckdb::Connection,

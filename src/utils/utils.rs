@@ -104,21 +104,6 @@ pub fn connect_to_db() -> Result<Connection, BucketError> {
     }
 }
 
-/// Get the database path without opening a connection
-pub fn get_db_path() -> Result<std::path::PathBuf, BucketError> {
-    let current_dir = env::current_dir()?;
-
-    match find_directory_in_parents(&current_dir, ".buckets") {
-        Some(path) => Ok(path.join("buckets.db")),
-        None => Err(BucketError::NotInRepo),
-    }
-}
-
-/// Create a database connection from a path (useful for reusing path lookups)
-pub fn connect_to_db_with_path(db_path: &std::path::Path) -> Result<Connection, BucketError> {
-    Connection::open(db_path).map_err(BucketError::DuckDB)
-}
-
 /// Helper to safely close a connection with proper error handling
 pub fn close_connection(connection: Connection) -> Result<(), BucketError> {
     if let Err((_conn, e)) = connection.close() {
@@ -669,5 +654,19 @@ mod tests {
         let _ = conn.close(); // Ignore close result
 
         Ok(())
+    }
+
+    /// Get the database path without opening a connection
+    pub fn get_db_path() -> Result<std::path::PathBuf, BucketError> {
+        let current_dir = env::current_dir()?;
+
+        match find_directory_in_parents(&current_dir, ".buckets") {
+            Some(path) => Ok(path.join("buckets.db")),
+            None => Err(BucketError::NotInRepo),
+        }
+    }
+    /// Create a database connection from a path (useful for reusing path lookups)
+    pub fn connect_to_db_with_path(db_path: &std::path::Path) -> Result<Connection, BucketError> {
+        Connection::open(db_path).map_err(BucketError::DuckDB)
     }
 }

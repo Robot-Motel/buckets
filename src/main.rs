@@ -29,7 +29,10 @@ static ARGS: Lazy<CliArguments> = Lazy::new(|| {
 // Define the thread-local EXIT variable with initial value of SUCCESS
 thread_local! {
     static EXIT: Cell<ExitCode> = Cell::new(ExitCode::SUCCESS);
-    static CURRENT_DIR: PathBuf = std::env::current_dir().expect("Failed to get current directory.");
+    static CURRENT_DIR: PathBuf = std::env::current_dir().unwrap_or_else(|_| {
+        eprintln!("Error: Failed to get current directory. Using current directory as fallback.");
+        PathBuf::from(".")
+    });
 }
 
 // Function to set the exit code to failure

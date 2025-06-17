@@ -1,5 +1,4 @@
 use crate::errors::BucketError;
-use std::fs;
 use std::path::{Path, PathBuf, Component};
 
 /// Maximum allowed path depth to prevent excessive recursion
@@ -169,89 +168,6 @@ fn is_dangerous_filename(name: &str) -> bool {
     false
 }
 
-/// Safely create a temporary file with secure permissions
-pub fn create_secure_temp_file(dir: &Path, prefix: &str) -> Result<PathBuf, BucketError> {
-    use std::fs::OpenOptions;
-    use std::os::unix::fs::OpenOptionsExt;
-    
-    // Validate the directory path
-    let validated_dir = validate_and_canonicalize_path(dir, None)?;
-    
-    if !validated_dir.exists() {
-        fs::create_dir_all(&validated_dir)?;
-    }
-    
-    // Generate a secure temporary filename
-    let temp_name = format!("{}.{}.tmp", prefix, uuid::Uuid::new_v4());
-    let temp_path = validated_dir.join(temp_name);
-    
-    // Create file with restrictive permissions (owner read/write only)
-    let _file = OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .mode(0o600) // Unix permissions: owner read/write only
-        .open(&temp_path)
-        .map_err(|e| BucketError::IoError(e))?;
-    
-    Ok(temp_path)
-}
-
-/// Validate that a path exists and is accessible
-pub fn validate_path_exists(path: &Path) -> Result<(), BucketError> {
-    if !path.exists() {
-        return Err(BucketError::PathValidationError(
-            format!("Path does not exist: {}", path.display())
-        ));
-    }
-    
-    // Try to read metadata to ensure we have access
-    fs::metadata(path).map_err(|e| {
-        BucketError::SecurityError(format!("Cannot access path {}: {}", path.display(), e))
-    })?;
-    
-    Ok(())
-}
-
-/// Securely delete a file by overwriting it before removal
-pub fn secure_delete_file(path: &Path) -> Result<(), BucketError> {
-    use std::fs::OpenOptions;
-    use std::io::{Write, Seek, SeekFrom};
-    
-    if !path.is_file() {
-        return Err(BucketError::PathValidationError(
-            "Path is not a file".to_string()
-        ));
-    }
-    
-    // Get file size
-    let metadata = fs::metadata(path)?;
-    let file_size = metadata.len();
-    
-    // Overwrite file contents with random data
-    let mut file = OpenOptions::new()
-        .write(true)
-        .open(path)?;
-    
-    // Simple overwrite with zeros (in production, use random data)
-    let zeros = vec![0u8; 4096];
-    let mut remaining = file_size;
-    
-    file.seek(SeekFrom::Start(0))?;
-    while remaining > 0 {
-        let chunk_size = std::cmp::min(remaining, zeros.len() as u64) as usize;
-        file.write_all(&zeros[..chunk_size])?;
-        remaining -= chunk_size as u64;
-    }
-    
-    file.sync_all()?;
-    drop(file);
-    
-    // Now remove the file
-    fs::remove_file(path)?;
-    
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,25 +240,6 @@ mod tests {
     }
     
     #[test]
-    fn test_create_secure_temp_file() {
-        let temp_dir = tempdir().unwrap();
-        let result = create_secure_temp_file(temp_dir.path(), "test");
-        
-        assert!(result.is_ok());
-        let temp_path = result.unwrap();
-        assert!(temp_path.exists());
-        
-        // Check permissions on Unix systems
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let metadata = fs::metadata(&temp_path).unwrap();
-            let permissions = metadata.permissions();
-            assert_eq!(permissions.mode() & 0o777, 0o600);
-        }
-    }
-    
-    #[test]
     fn test_validate_path_exists() {
         let temp_dir = tempdir().unwrap();
         let existing_path = temp_dir.path().join("test.txt");
@@ -364,4 +261,61 @@ mod tests {
         assert!(secure_delete_file(&test_file).is_ok());
         assert!(!test_file.exists());
     }
+    
+    /// Securely delete a file by overwriting it before removal
+    pub fn secure_delete_file(path: &Path) -> Result<(), BucketError> {
+        use std::fs::OpenOptions;
+        use std::io::{Write, Seek, SeekFrom};
+        
+        if !path.is_file() {
+            return Err(BucketError::PathValidationError(
+                "Path is not a file".to_string()
+            ));
+        }
+        
+        // Get file size
+        let metadata = fs::metadata(path)?;
+        let file_size = metadata.len();
+        
+        // Overwrite file contents with random data
+        let mut file = OpenOptions::new()
+            .write(true)
+            .open(path)?;
+        
+        // Simple overwrite with zeros (in production, use random data)
+        let zeros = vec![0u8; 4096];
+        let mut remaining = file_size;
+        
+        file.seek(SeekFrom::Start(0))?;
+        while remaining > 0 {
+            let chunk_size = std::cmp::min(remaining, zeros.len() as u64) as usize;
+            file.write_all(&zeros[..chunk_size])?;
+            remaining -= chunk_size as u64;
+        }
+        
+        file.sync_all()?;
+        drop(file);
+        
+        // Now remove the file
+        fs::remove_file(path)?;
+        
+        Ok(())
+    }
+
+    /// Validate that a path exists and is accessible
+    pub fn validate_path_exists(path: &Path) -> Result<(), BucketError> {
+        if !path.exists() {
+            return Err(BucketError::PathValidationError(
+                format!("Path does not exist: {}", path.display())
+            ));
+        }
+        
+        // Try to read metadata to ensure we have access
+        fs::metadata(path).map_err(|e| {
+            BucketError::SecurityError(format!("Cannot access path {}: {}", path.display(), e))
+        })?;
+        
+        Ok(())
+    }
+
 }
