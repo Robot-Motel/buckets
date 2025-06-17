@@ -146,6 +146,22 @@ impl Create {
             ));
         }
 
+        // Additional security checks for dangerous characters
+        if bucket_name.chars().any(|c| c.is_control()) {
+            return Err(BucketError::InvalidBucketName(
+                "cannot contain control characters".to_string(),
+            ));
+        }
+
+        // Check for reserved names (Windows compatibility)
+        let upper_name = bucket_name.to_uppercase();
+        const RESERVED_NAMES: &[&str] = &["CON", "PRN", "AUX", "NUL"];
+        if RESERVED_NAMES.contains(&upper_name.as_str()) {
+            return Err(BucketError::InvalidBucketName(
+                "cannot use reserved system names".to_string(),
+            ));
+        }
+
         if bucket_name.len() > 255 {
             return Err(BucketError::InvalidBucketName(
                 "too long (maximum 255 characters)".to_string(),

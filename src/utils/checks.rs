@@ -121,13 +121,20 @@ pub fn is_valid_bucket_info(dir_path: &Path) -> bool {
 }
 
 pub fn validate_path(path: &str) -> Result<PathBuf, String> {
+    use crate::utils::security::validate_and_canonicalize_path;
+    
     let path_buf = PathBuf::from(path);
-    let resolved_path = if path_buf.is_relative() {
-        // Resolve relative path using CURRENT_DIR
-        CURRENT_DIR.with(|current_dir| current_dir.join(path_buf))
+    
+    // Get the base directory for validation
+    let base_dir = if path_buf.is_relative() {
+        Some(CURRENT_DIR.with(|current_dir| current_dir.clone()))
     } else {
-        path_buf
+        None
     };
+    
+    // Use secure path validation
+    let resolved_path = validate_and_canonicalize_path(&path_buf, base_dir.as_deref())
+        .map_err(|e| e.message())?;
 
     if !resolved_path.exists() {
         Err(format!(

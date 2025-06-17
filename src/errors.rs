@@ -25,6 +25,10 @@ pub enum BucketError {
     NotFound(String),
     #[error("File not found {0}")]
     FileNotFound(String),
+    #[error("Security error: {0}")]
+    SecurityError(String),
+    #[error("Path validation error: {0}")]
+    PathValidationError(String),
 }
 
 impl BucketError {
@@ -44,6 +48,8 @@ impl BucketError {
             BucketError::InvalidData(message) => format!("Invalid data {}", message),
             BucketError::NotFound(message) => format!("Not found {}", message),
             BucketError::FileNotFound(message) => format!("File not found {}", message),
+            BucketError::SecurityError(message) => format!("Security error: {}", message),
+            BucketError::PathValidationError(message) => format!("Path validation error: {}", message),
         }
     }
 }
