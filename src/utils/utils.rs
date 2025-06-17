@@ -500,7 +500,7 @@ mod tests {
         // Should find normal files but not files in .b directories
         let file_names: Vec<String> = files.iter().map(|f| f.to_string_lossy().to_string()).collect();
         assert!(file_names.contains(&"normal.txt".to_string()));
-        assert!(file_names.contains(&"subdir2/file2.txt".to_string()));
+        assert!(file_names.iter().any(|name| name.contains(&format!("subdir2{}{}", std::path::MAIN_SEPARATOR, "file2.txt"))));
         assert!(!file_names.iter().any(|name| name.contains(".b")));
         
         Ok(())
