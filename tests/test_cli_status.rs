@@ -1,12 +1,12 @@
 mod common;
 #[cfg(test)]
 mod tests {
+    use crate::common::tests::get_test_dir;
+    use predicates::prelude::predicate;
+    use serial_test::serial;
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
-    use predicates::prelude::predicate;
-    use crate::common::tests::get_test_dir;
-    use serial_test::serial;
 
     /// Test the `status` command.
     ///

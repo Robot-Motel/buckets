@@ -3,7 +3,9 @@ use crate::commands::BucketCommand;
 use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit as CommitData, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
-use crate::utils::utils::{connect_to_db, find_files_excluding_top_level_b, hash_file, with_db_connection};
+use crate::utils::utils::{
+    connect_to_db, find_files_excluding_top_level_b, hash_file, with_db_connection,
+};
 use crate::world::World;
 use blake3::Hash;
 use duckdb::params;
@@ -27,7 +29,9 @@ impl BucketCommand for Commit {
     }
 
     fn execute(&self) -> Result<(), BucketError> {
-        println!("Executing commit command ########################################################## ");
+        println!(
+            "Executing commit command ########################################################## "
+        );
 
         let world = World::new(&self.args.shared)?;
 
@@ -36,7 +40,10 @@ impl BucketCommand for Commit {
             None => return Err(BucketError::NotInBucket),
         };
 
-        println!("Bucket: {} ########################################################## ", bucket.name);
+        println!(
+            "Bucket: {} ########################################################## ",
+            bucket.name
+        );
 
         // create a list of each file in the bucket directory, recursively
         // and create a blake3 hash for each file and add to current_commit
@@ -107,12 +114,18 @@ impl Commit {
         // Use a single connection for all database operations
         with_db_connection(|connection| {
             // Insert the commit into the database
-            let commit_id = self.insert_commit_into_db_with_connection(connection, bucket_id, message)?;
+            let commit_id =
+                self.insert_commit_into_db_with_connection(connection, bucket_id, message)?;
 
             // Process each file in the commit using the same connection
             for file in files {
                 // Insert the file into the database
-                self.insert_file_into_db_with_connection(connection, &commit_id, &file.name, &file.hash.to_string())?;
+                self.insert_file_into_db_with_connection(
+                    connection,
+                    &commit_id,
+                    &file.name,
+                    &file.hash.to_string(),
+                )?;
 
                 // Compress and store the file (no database operation)
                 file.compress_and_store(&bucket_path).map_err(|e| {
@@ -143,8 +156,8 @@ impl Commit {
         })?;
         if let Err((_conn, e)) = connection.close() {
             return Err(BucketError::from(Error::new(
-                ErrorKind::Other, 
-                format!("Failed to close database connection: {}", e)
+                ErrorKind::Other,
+                format!("Failed to close database connection: {}", e),
             )));
         }
         Ok(())
@@ -161,7 +174,7 @@ impl Commit {
             connection
                 .path()
                 .ok_or_else(|| BucketError::from(Error::new(
-                    ErrorKind::Other, 
+                    ErrorKind::Other,
                     "Invalid database connection path".to_string()
                 )))?
                 .display()
@@ -178,11 +191,11 @@ impl Commit {
         } else {
             Err(BucketError::from(duckdb::Error::QueryReturnedNoRows))
         };
-        
+
         if let Err((_conn, e)) = connection.close() {
             return Err(BucketError::from(Error::new(
-                ErrorKind::Other, 
-                format!("Failed to close database connection: {}", e)
+                ErrorKind::Other,
+                format!("Failed to close database connection: {}", e),
             )));
         }
         result
@@ -221,7 +234,7 @@ impl Commit {
             connection
                 .path()
                 .ok_or_else(|| BucketError::from(Error::new(
-                    ErrorKind::Other, 
+                    ErrorKind::Other,
                     "Invalid database connection path".to_string()
                 )))?
                 .display()
@@ -257,8 +270,12 @@ impl Commit {
                             previous_hash: Hash::from_str(
                                 "0000000000000000000000000000000000000000000000000000000000000000",
                             )
-                            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, 
-                                format!("Invalid hash format: {}", e)))?,
+                            .map_err(|e| {
+                                io::Error::new(
+                                    io::ErrorKind::InvalidData,
+                                    format!("Invalid hash format: {}", e),
+                                )
+                            })?,
                             status: CommitStatus::Unknown,
                         });
                     }
@@ -299,24 +316,36 @@ impl Commit {
             let hex_string: String = row.get(2)?;
 
             files.push(CommittedFile {
-                id: Uuid::parse_str(&uuid_string).map_err(|e| BucketError::from(
-                    Error::new(ErrorKind::InvalidData, format!("Invalid UUID: {}", e))))?,
+                id: Uuid::parse_str(&uuid_string).map_err(|e| {
+                    BucketError::from(Error::new(
+                        ErrorKind::InvalidData,
+                        format!("Invalid UUID: {}", e),
+                    ))
+                })?,
                 name: row.get(1)?,
-                hash: Hash::from_hex(&hex_string).map_err(|e| BucketError::from(
-                    Error::new(ErrorKind::InvalidData, format!("Invalid hash: {}", e))))?,
+                hash: Hash::from_hex(&hex_string).map_err(|e| {
+                    BucketError::from(Error::new(
+                        ErrorKind::InvalidData,
+                        format!("Invalid hash: {}", e),
+                    ))
+                })?,
                 previous_hash: Hash::from_str(
                     "0000000000000000000000000000000000000000000000000000000000000000",
                 )
-                .map_err(|e| BucketError::from(Error::new(ErrorKind::InvalidData, 
-                    format!("Invalid hash format: {}", e))))?, // TODO: Implement previous hash
+                .map_err(|e| {
+                    BucketError::from(Error::new(
+                        ErrorKind::InvalidData,
+                        format!("Invalid hash format: {}", e),
+                    ))
+                })?, // TODO: Implement previous hash
                 status: CommitStatus::Committed,
             });
         }
 
         if let Err((_conn, e)) = connection.close() {
             return Err(BucketError::from(Error::new(
-                ErrorKind::Other, 
-                format!("Failed to close database connection: {}", e)
+                ErrorKind::Other,
+                format!("Failed to close database connection: {}", e),
             )));
         }
 
@@ -327,7 +356,6 @@ impl Commit {
             previous: None,
             next: None,
         }))
-        
     }
 }
 
@@ -339,13 +367,13 @@ mod tests {
     use crate::data::commit::{CommitStatus, CommittedFile};
     use blake3::Hash;
     use log::error;
+    use serial_test::serial;
     use std::env;
     use std::fs::File;
     use std::io::Write;
     use std::str::FromStr;
     use tempfile::tempdir;
     use uuid::Uuid;
-    use serial_test::serial;    
 
     #[test]
     #[serial]
@@ -371,7 +399,8 @@ mod tests {
         let file_path = bucket_dir.join("test_file.txt");
         let mut file = File::create(&file_path).expect("Failed to create test file");
         file.write_all(b"test").expect("Failed to write test data");
-        let mut cmd3 = assert_cmd::Command::cargo_bin("buckets").expect("Failed to find buckets binary");
+        let mut cmd3 =
+            assert_cmd::Command::cargo_bin("buckets").expect("Failed to find buckets binary");
         cmd3.current_dir(bucket_dir.as_path())
             .arg("commit")
             .arg("test message")

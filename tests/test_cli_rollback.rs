@@ -2,12 +2,12 @@ mod common;
 
 #[cfg(test)]
 mod tests {
+    use crate::common::tests::get_test_dir;
+    use predicates::prelude::predicate;
+    use serial_test::serial;
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
-    use predicates::prelude::predicate;
-    use crate::common::tests::get_test_dir;
-    use serial_test::serial;
 
     /// Test the `rollback` command.
     ///
@@ -24,7 +24,9 @@ mod tests {
 
         let file_path = bucket_dir.join("test_file.txt");
         let mut file_1 = File::create(&file_path).expect("Failed to create file");
-        file_1.write_all(b"test file 1").expect("Failed to write to file");
+        file_1
+            .write_all(b"test file 1")
+            .expect("Failed to write to file");
 
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd1.current_dir(bucket_dir.as_path())
@@ -33,7 +35,9 @@ mod tests {
             .assert()
             .success();
 
-        file_1.write_all(b"change file 1").expect("Failed to write to file");
+        file_1
+            .write_all(b"change file 1")
+            .expect("Failed to write to file");
 
         let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd2.current_dir(bucket_dir.as_path())
@@ -54,7 +58,6 @@ mod tests {
             .assert()
             .stdout(predicate::str::contains("committed:    test_file.txt"))
             .success();
-
     }
 
     fn setup() -> PathBuf {

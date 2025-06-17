@@ -1,6 +1,6 @@
 use crate::args::StashCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Stash command placeholder
 pub struct Stash {

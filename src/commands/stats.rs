@@ -1,6 +1,6 @@
 use crate::args::StatsCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Stats command placeholder
 pub struct Stats {

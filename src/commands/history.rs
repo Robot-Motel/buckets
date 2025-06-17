@@ -2,8 +2,8 @@ use std::path::PathBuf;
 
 use crate::args::HistoryCommand;
 use crate::errors::BucketError;
-use duckdb::Connection;
 use crate::utils::utils::find_bucket_repo;
+use duckdb::Connection;
 
 #[derive(Debug)]
 pub struct CommitRecord {
@@ -35,25 +35,24 @@ impl CommitRecord {
 pub fn execute(command: HistoryCommand) -> Result<(), BucketError> {
     let x = command;
     println!("History command: {:?}", x);
-    
+
     let current_dir = std::env::current_dir()?;
     let commits = fetch_commit_history(&current_dir)?;
     display_commit_history(&commits);
-    
+
     Ok(())
 }
 
 fn fetch_commit_history(bucket_dir: &PathBuf) -> Result<Vec<CommitRecord>, BucketError> {
-    
     let repo_root = find_bucket_repo(&bucket_dir).ok_or(BucketError::NotInRepo)?;
     let db_path = repo_root.join("buckets.db");
-    
+
     let conn = Connection::open(&db_path)?;
     let mut stmt = conn.prepare(
         "SELECT c.id, c.message, CAST(c.created_at AS TEXT), b.name as bucket_name 
          FROM commits c 
          JOIN buckets b ON c.bucket_id = b.id 
-         ORDER BY c.created_at DESC"
+         ORDER BY c.created_at DESC",
     )?;
 
     let mut commits = Vec::new();
@@ -64,11 +63,21 @@ fn fetch_commit_history(bucket_dir: &PathBuf) -> Result<Vec<CommitRecord>, Bucke
         let message: String = row.get(1)?;
         let created_at: String = match row.get(2) {
             Ok(it) => it,
-            Err(err) => return Err(BucketError::InvalidData(format!("Invalid data: {:?}", err.to_string()))),
+            Err(err) => {
+                return Err(BucketError::InvalidData(format!(
+                    "Invalid data: {:?}",
+                    err.to_string()
+                )))
+            }
         };
         let bucket_name: String = match row.get(3) {
             Ok(it) => it,
-            Err(err) => return Err(BucketError::InvalidData(format!("Invalid data: {:?}", err.to_string()))),
+            Err(err) => {
+                return Err(BucketError::InvalidData(format!(
+                    "Invalid data: {:?}",
+                    err.to_string()
+                )))
+            }
         };
 
         commits.push(CommitRecord::new(id, message, created_at, bucket_name));
@@ -80,7 +89,7 @@ fn fetch_commit_history(bucket_dir: &PathBuf) -> Result<Vec<CommitRecord>, Bucke
 fn display_commit_history(commits: &[CommitRecord]) {
     println!("Commit History:");
     println!("----------------------------------------");
-    
+
     for commit in commits {
         commit.display();
     }
@@ -89,26 +98,26 @@ fn display_commit_history(commits: &[CommitRecord]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::args::HistoryCommand;
+    use serial_test::serial;
     use std::env;
     use std::fs::File;
     use std::io::Write;
     use tempfile::tempdir;
-    use crate::args::HistoryCommand;
-    use serial_test::serial;
-    
+
     #[test]
     fn test_commit_record_display() {
         let record = CommitRecord::new(
             "abc123".to_string(),
             "Test commit".to_string(),
             "2023-01-01 12:00:00".to_string(),
-            "test_bucket".to_string()
+            "test_bucket".to_string(),
         );
-        
+
         // This is a simple test that just ensures the display method doesn't panic
         record.display();
     }
-    
+
     #[test]
     #[serial]
     fn test_fetch_commit_history() {
@@ -142,10 +151,10 @@ mod tests {
 
         // Test fetch_commit_history
         let commits = fetch_commit_history(&bucket_dir).expect("Failed to fetch commit history");
-        
+
         // Verify we have at least one commit
         assert!(!commits.is_empty());
-        
+
         // Verify the commit has the expected message
         assert!(commits.iter().any(|c| c.message == "test message"));
     }
@@ -189,9 +198,7 @@ mod tests {
             shared: Default::default(),
         };
         let result = execute(history_cmd);
-        
+
         assert!(result.is_ok());
     }
 }
-
-

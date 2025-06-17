@@ -1,19 +1,19 @@
-use std::cell::Cell;
-use std::path::PathBuf;
-use std::process::ExitCode;
+use crate::args::{CliArguments, Command};
+use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 use clap::error::ErrorKind;
 use clap::Parser;
 use once_cell::sync::Lazy;
-use crate::args::{CliArguments, Command};
-use crate::errors::BucketError;
-use crate::commands::BucketCommand;
+use std::cell::Cell;
+use std::path::PathBuf;
+use std::process::ExitCode;
 
 mod args;
 mod commands;
-mod errors;
-mod utils;
 mod config;
 mod data;
+mod errors;
+mod utils;
 mod world;
 
 static ARGS: Lazy<CliArguments> = Lazy::new(|| {
@@ -49,7 +49,6 @@ fn main() -> ExitCode {
 }
 
 fn dispatch() -> Result<(), BucketError> {
-
     match &ARGS.command {
         // Commands that modify the repository
         Command::Init(command) => commands::init::Init::new(command).execute()?,

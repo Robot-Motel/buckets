@@ -1,6 +1,6 @@
 use crate::args::LinkCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Link command placeholder
 pub struct Link {

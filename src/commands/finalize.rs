@@ -1,6 +1,6 @@
 use crate::args::FinalizeCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Finalize command placeholder
 pub struct Finalize {

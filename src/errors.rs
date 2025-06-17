@@ -25,6 +25,10 @@ pub enum BucketError {
     NotFound(String),
     #[error("File not found {0}")]
     FileNotFound(String),
+    #[error("Security error: {0}")]
+    SecurityError(String),
+    #[error("Path validation error: {0}")]
+    PathValidationError(String),
 }
 
 impl BucketError {
@@ -33,7 +37,9 @@ impl BucketError {
             BucketError::IoError(e) => format!("IO Error: {}", e),
             BucketError::DuckDB(e) => format!("Database Error: {}", e),
             BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
-            BucketError::RepoAlreadyExists(message) => format!("Repository {} already exists", message),
+            BucketError::RepoAlreadyExists(message) => {
+                format!("Repository {} already exists", message)
+            }
             BucketError::NotInRepo => "Not in a buckets repository".to_string(),
             BucketError::NotInBucket => "Not in a bucket".to_string(),
             // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
@@ -42,6 +48,8 @@ impl BucketError {
             BucketError::InvalidData(message) => format!("Invalid data {}", message),
             BucketError::NotFound(message) => format!("Not found {}", message),
             BucketError::FileNotFound(message) => format!("File not found {}", message),
+            BucketError::SecurityError(message) => format!("Security error: {}", message),
+            BucketError::PathValidationError(message) => format!("Path validation error: {}", message),
         }
     }
 }
@@ -77,14 +85,8 @@ mod tests {
             BucketError::NotInRepo.message(),
             "Not in a buckets repository"
         );
-        assert_eq!(
-            BucketError::NotInBucket.message(),
-            "Not in a bucket"
-        );
-        assert_eq!(
-            BucketError::NotAValidBucket.message(),
-            "Not a valid bucket"
-        );
+        assert_eq!(BucketError::NotInBucket.message(), "Not in a bucket");
+        assert_eq!(BucketError::NotAValidBucket.message(), "Not a valid bucket");
         assert_eq!(
             BucketError::InvalidBucketName("cannot be empty".to_string()).message(),
             "Invalid bucket name: cannot be empty"
