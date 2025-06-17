@@ -1,0 +1,205 @@
+{
+  "binaries": [
+    {
+      "name": "buckets",
+      "src_path": "/home/olivier/buckets/src/main.rs",
+      "required_features": []
+    }
+  ],
+  "examples": [],
+  "integration_tests": [
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_check",
+        "src_path": "/home/olivier/buckets/tests/test_cli_check.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_check"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_commit",
+        "src_path": "/home/olivier/buckets/tests/test_cli_commit.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_commit",
+        "tests::test_cli_commit_binary_file",
+        "tests::test_cli_commit_empty_file",
+        "tests::test_cli_commit_invalid_bucket",
+        "tests::test_cli_commit_large_file",
+        "tests::test_cli_commit_missing_message",
+        "tests::test_cli_commit_no_files",
+        "tests::test_cli_commit_not_in_repo",
+        "tests::test_cli_commit_special_filename"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_create",
+        "src_path": "/home/olivier/buckets/tests/test_cli_create.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_create",
+        "tests::test_cli_create_bucket_already_exists",
+        "tests::test_cli_create_invalid_bucket_name",
+        "tests::test_cli_create_long_bucket_name",
+        "tests::test_cli_create_missing_name",
+        "tests::test_cli_create_no_repo",
+        "tests::test_cli_create_special_characters"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_expect",
+        "src_path": "/home/olivier/buckets/tests/test_cli_expect.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_expect"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_finalize",
+        "src_path": "/home/olivier/buckets/tests/test_cli_finalize.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_finalize"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_history",
+        "src_path": "/home/olivier/buckets/tests/test_cli_history.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "acceptance_tests::test_cli_history_multiple_commits",
+        "acceptance_tests::test_cli_history_one_commit"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_init",
+        "src_path": "/home/olivier/buckets/tests/test_cli_init.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_init"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_link",
+        "src_path": "/home/olivier/buckets/tests/test_cli_link.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_link"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_list",
+        "src_path": "/home/olivier/buckets/tests/test_cli_list.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_list"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_revert",
+        "src_path": "/home/olivier/buckets/tests/test_cli_revert.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_revert"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_rollback",
+        "src_path": "/home/olivier/buckets/tests/test_cli_rollback.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_rollback"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_schema",
+        "src_path": "/home/olivier/buckets/tests/test_cli_schema.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_schema"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_stash",
+        "src_path": "/home/olivier/buckets/tests/test_cli_stash.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_stash"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_stats",
+        "src_path": "/home/olivier/buckets/tests/test_cli_stats.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_stats"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "test_cli_status",
+        "src_path": "/home/olivier/buckets/tests/test_cli_status.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_status"
+      ]
+    },
+    {
+      "package_name": "buckets",
+      "test": {
+        "name": "tests",
+        "src_path": "/home/olivier/buckets/tests/tests.rs",
+        "required_features": []
+      },
+      "test_cases": [
+        "tests::test_cli_check",
+        "tests::test_version"
+      ]
+    }
+  ],
+  "unit_tests": []
+}

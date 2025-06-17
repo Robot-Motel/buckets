@@ -1,15 +1,15 @@
-use std::env;
-use std::io::{self, Error, ErrorKind};
-use log::error;
 use crate::args::StatusCommand;
 use crate::commands::commit::Commit;
-use crate::CURRENT_DIR;
+use crate::commands::BucketCommand;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::config::RepositoryConfig;
 use crate::utils::utils::{find_bucket_path, with_db_connection};
-use crate::commands::BucketCommand;
+use crate::CURRENT_DIR;
+use log::error;
+use std::env;
+use std::io::{self, Error, ErrorKind};
 
 /// Show status of the current bucket or repository
 pub struct Status {
@@ -34,8 +34,8 @@ impl BucketCommand for Status {
         if !checks::is_valid_bucket(&current_dir) {
             self.repository_status()
         } else {
-            let bucket_path = find_bucket_path(&current_dir)
-                .ok_or_else(|| BucketError::NotAValidBucket)?;
+            let bucket_path =
+                find_bucket_path(&current_dir).ok_or_else(|| BucketError::NotAValidBucket)?;
 
             let bucket = match Bucket::from_meta_data(&bucket_path) {
                 Ok(bucket) => bucket,
@@ -68,18 +68,23 @@ impl Status {
         match Commit::load_last_commit(bucket.name) {
             Ok(None) => {
                 bucket_files.files.iter().for_each(|file| {
-                    println!("new file:    {}", file.name );
+                    println!("new file:    {}", file.name);
                 });
             }
             Ok(Some(previous_commit)) => {
-                let changes = bucket_files.compare(&previous_commit).ok_or_else(|| BucketError::from("Failed to compare files."))?;
+                let changes = bucket_files
+                    .compare(&previous_commit)
+                    .ok_or_else(|| BucketError::from("Failed to compare files."))?;
                 changes.iter().for_each(|change| {
                     println!("{}:    {}", change.status, change.name);
                 });
             }
             Err(_) => {
                 error!("Failed to load previous commit.");
-                return Err(BucketError::from(Error::new(ErrorKind::Other, "Failed to load previous commit.")));
+                return Err(BucketError::from(Error::new(
+                    ErrorKind::Other,
+                    "Failed to load previous commit.",
+                )));
             }
         }
 
@@ -87,8 +92,12 @@ impl Status {
     }
 
     fn repository_status(&self) -> Result<(), BucketError> {
-        let current_dir = env::current_dir().map_err(|e| BucketError::from(
-            io::Error::new(io::ErrorKind::Other, format!("Failed to get current directory: {}", e))))?;
+        let current_dir = env::current_dir().map_err(|e| {
+            BucketError::from(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to get current directory: {}", e),
+            ))
+        })?;
         let repo_config = RepositoryConfig::from_file(current_dir)?;
         println!("Repository config: {:?}", repo_config);
         let buckets = self.query_buckets().map_err(|e| BucketError::from(e))?;
@@ -100,17 +109,19 @@ impl Status {
     fn query_buckets(&self) -> Result<Vec<Bucket>, BucketError> {
         with_db_connection(|connection| {
             let mut stmt = connection.prepare("SELECT id, name, path FROM buckets")?;
-            let bucket_iter = stmt.query_map([], |row| {
-                let uuid_str: String = row.get(0)?;
-                let path_str: String = row.get(2)?;
-                let uuid = uuid::Uuid::parse_str(&uuid_str)
-                    .map_err(|e| BucketError::InvalidData(e.to_string()))?;
-                Ok(Bucket {
-                    id: uuid,
-                    name: row.get(1)?,
-                    relative_bucket_path: std::path::PathBuf::from(path_str),
+            let bucket_iter = stmt
+                .query_map([], |row| {
+                    let uuid_str: String = row.get(0)?;
+                    let path_str: String = row.get(2)?;
+                    let uuid = uuid::Uuid::parse_str(&uuid_str)
+                        .map_err(|e| BucketError::InvalidData(e.to_string()))?;
+                    Ok(Bucket {
+                        id: uuid,
+                        name: row.get(1)?,
+                        relative_bucket_path: std::path::PathBuf::from(path_str),
+                    })
                 })
-            }).map_err(BucketError::from)?;
+                .map_err(BucketError::from)?;
             let mut buckets = Vec::new();
             for bucket in bucket_iter {
                 buckets.push(bucket.map_err(BucketError::from)?); // Ensure all errors are converted properly

@@ -1,6 +1,6 @@
 use crate::args::ListCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// List command placeholder
 pub struct List {

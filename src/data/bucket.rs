@@ -1,17 +1,19 @@
+use crate::data::commit::{Commit, CommitStatus, CommittedFile};
+use crate::errors::BucketError;
 use crate::utils::checks::{find_directory_in_parents, is_valid_bucket_info};
+use crate::utils::utils::{
+    connect_to_db, find_bucket_repo, find_files_excluding_top_level_b, hash_file,
+};
+use blake3::Hash;
 use log::debug;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::{env, io};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use blake3::Hash;
-use serde::{Deserialize, Serialize};
+use std::{env, io};
 use toml::to_string;
 use uuid::Uuid;
-use crate::data::commit::{Commit, CommitStatus, CommittedFile};
-use crate::errors::BucketError;
-use crate::utils::utils::{connect_to_db, find_bucket_repo, find_files_excluding_top_level_b, hash_file};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Bucket {
@@ -31,7 +33,6 @@ pub trait BucketTrait {
     fn list_files_with_metadata_in_bucket(&self) -> io::Result<Commit>;
     #[allow(dead_code)]
     fn load_last_commit(&self) -> Result<Option<Commit>, BucketError>;
-
 }
 
 impl BucketTrait for Bucket {
@@ -102,9 +103,11 @@ impl BucketTrait for Bucket {
     fn list_files_with_metadata_in_bucket(&self) -> io::Result<Commit> {
         let mut files = Vec::new();
 
-        for entry in find_files_excluding_top_level_b(self.get_full_bucket_path()
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?.
-            as_path()) {
+        for entry in find_files_excluding_top_level_b(
+            self.get_full_bucket_path()
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?
+                .as_path(),
+        ) {
             let path = entry.as_path();
 
             if path.is_file() {
@@ -115,8 +118,10 @@ impl BucketTrait for Bucket {
                             id: Default::default(),
                             name: path.to_string_lossy().into_owned(),
                             hash,
-                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
-                                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
+                            previous_hash: Hash::from_str(
+                                "0000000000000000000000000000000000000000000000000000000000000000",
+                            )
+                            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
                             status: CommitStatus::Unknown,
                         });
                     }
@@ -140,13 +145,14 @@ impl BucketTrait for Bucket {
     }
 
     fn load_last_commit(&self) -> Result<Option<Commit>, BucketError> {
-
         let connection = connect_to_db()?;
 
-        let mut stmt = connection.prepare("SELECT f.id, f.file_path, f.hash
+        let mut stmt = connection.prepare(
+            "SELECT f.id, f.file_path, f.hash
                                                FROM files f
                                                JOIN commits c ON f.commit_id = c.id
-                                WHERE c.created_at = (SELECT MAX(created_at) FROM commits)")?;
+                                WHERE c.created_at = (SELECT MAX(created_at) FROM commits)",
+        )?;
 
         let mut rows = stmt.query([])?;
 
@@ -156,19 +162,24 @@ impl BucketTrait for Bucket {
             let hex_string: String = row.get(2)?;
 
             files.push(CommittedFile {
-                id: Uuid::parse_str(&uuid_string).map_err(|e| BucketError::InvalidData(e.to_string()))?,
-                name: row.get(1)?,
-                hash: Hash::from_hex(&hex_string).map_err(|e| BucketError::InvalidData(e.to_string()))?,
-                previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                id: Uuid::parse_str(&uuid_string)
                     .map_err(|e| BucketError::InvalidData(e.to_string()))?,
+                name: row.get(1)?,
+                hash: Hash::from_hex(&hex_string)
+                    .map_err(|e| BucketError::InvalidData(e.to_string()))?,
+                previous_hash: Hash::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )
+                .map_err(|e| BucketError::InvalidData(e.to_string()))?,
                 status: CommitStatus::Committed,
             });
         }
 
         if let Err((_conn, e)) = connection.close() {
-            return Err(BucketError::from(
-                io::Error::new(io::ErrorKind::Other, format!("Failed to close database connection: {}", e))
-            ));
+            return Err(BucketError::from(io::Error::new(
+                io::ErrorKind::Other,
+                format!("Failed to close database connection: {}", e),
+            )));
         }
 
         Ok(Some(Commit {
@@ -204,9 +215,9 @@ pub fn read_bucket_info(path: &PathBuf) -> Result<Bucket, std::io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::fs::create_dir_all;
     use std::path::PathBuf;
-    use serial_test::serial;
     use tempfile::tempdir;
     use uuid::Uuid;
 
@@ -240,7 +251,9 @@ mod tests {
         create_dir_all(&bucket_meta_path)?;
 
         let bucket_default = Bucket::default(Uuid::new_v4(), &bucket_name, &bucket_path);
-        bucket_default.write_bucket_info().expect("Failed to write bucket info in test");
+        bucket_default
+            .write_bucket_info()
+            .expect("Failed to write bucket info in test");
 
         let bucket = match Bucket::from_meta_data(&bucket_path) {
             Ok(bucket) => bucket,
@@ -260,11 +273,15 @@ mod tests {
         };
 
         let toml_string = toml::to_string(&bucket).expect("Failed to serialize bucket");
-        let deserialized: Bucket = toml::from_str(&toml_string).expect("Failed to deserialize bucket");
+        let deserialized: Bucket =
+            toml::from_str(&toml_string).expect("Failed to deserialize bucket");
 
         assert_eq!(bucket.id, deserialized.id);
         assert_eq!(bucket.name, deserialized.name);
-        assert_eq!(bucket.relative_bucket_path, deserialized.relative_bucket_path);
+        assert_eq!(
+            bucket.relative_bucket_path,
+            deserialized.relative_bucket_path
+        );
     }
 
     #[test]
@@ -320,12 +337,12 @@ mod tests {
             std::fs::set_permissions(&bucket_meta_path, perms)?;
 
             let result = bucket.write_bucket_info();
-            
+
             // Restore permissions for cleanup
             let mut perms = std::fs::metadata(&bucket_meta_path)?.permissions();
             perms.set_mode(0o755);
             std::fs::set_permissions(&bucket_meta_path, perms)?;
-            
+
             assert!(result.is_err());
         }
 
@@ -338,7 +355,6 @@ mod tests {
         let bucket_path = setup_test_environment()?;
         let bucket = Bucket::default(Uuid::new_v4(), &"test".to_string(), &bucket_path);
         // change the current directory to the bucket path
-        
 
         match bucket.get_full_bucket_path() {
             Ok(_) => Ok(()),
@@ -428,7 +444,8 @@ mod tests {
         create_dir_all(&bucket_meta_path)?;
 
         // Create a valid bucket and write its info
-        let original_bucket = Bucket::default(Uuid::new_v4(), &"valid_bucket".to_string(), &bucket_path);
+        let original_bucket =
+            Bucket::default(Uuid::new_v4(), &"valid_bucket".to_string(), &bucket_path);
         original_bucket.write_bucket_info()?;
 
         // Read it back using the standalone function

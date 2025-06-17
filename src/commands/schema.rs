@@ -1,6 +1,6 @@
 use crate::args::SchemaCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Schema command placeholder
 pub struct Schema {
@@ -19,4 +19,4 @@ impl BucketCommand for Schema {
         println!("schema command");
         Ok(())
     }
-} 
+}

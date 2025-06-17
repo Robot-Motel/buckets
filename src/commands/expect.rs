@@ -1,6 +1,6 @@
 use crate::args::ExpectCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Expect command placeholder
 pub struct Expect {

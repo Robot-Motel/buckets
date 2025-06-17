@@ -1,10 +1,10 @@
+use blake3::Hash;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::PartialEq;
 use std::fmt::{Display, Formatter};
 use std::io;
 use std::path::PathBuf;
 use std::str::FromStr;
-use blake3::Hash;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
 use crate::utils::compression::{compress_and_store_file, restore_file};
@@ -58,16 +58,16 @@ pub struct Commit {
 
 // Custom function to serialize a `blake3::Hash` to a hex string
 fn hash_to_hex<S>(hash: &Hash, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
+where
+    S: Serializer,
 {
     serializer.serialize_str(&hash.to_hex())
 }
 
 // Custom function to deserialize a hex string back to a `blake3::Hash`
 fn hex_to_hash<'de, D>(deserializer: D) -> Result<Hash, D::Error>
-    where
-        D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
     Hash::from_hex(&s).map_err(serde::de::Error::custom)
@@ -89,12 +89,12 @@ impl Commit {
     #[allow(dead_code)]
     pub fn compare(&self, other_commit: &Commit) -> Option<Vec<CommittedFile>> {
         let Commit {
-                bucket: _,
-                files: _,
-                timestamp: _,
-                previous: _,
-                next: _,
-            } = other_commit;
+            bucket: _,
+            files: _,
+            timestamp: _,
+            previous: _,
+            next: _,
+        } = other_commit;
         {
             let mut status_all_files = Vec::new();
 
@@ -134,8 +134,10 @@ impl Commit {
                         id: file.id,
                         name: file.name.clone(),
                         hash: file.hash.clone(),
-                        previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
-                            .unwrap_or_else(|_| Hash::from([0u8; 32])),
+                        previous_hash: Hash::from_str(
+                            "0000000000000000000000000000000000000000000000000000000000000000",
+                        )
+                        .unwrap_or_else(|_| Hash::from([0u8; 32])),
                         status: CommitStatus::New,
                     });
                 }
@@ -155,7 +157,9 @@ impl Commit {
                             id: other_file.id,
                             name: other_file.name.clone(),
                             hash: other_file.hash.clone(),
-                            previous_hash: Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
+                            previous_hash: Hash::from_str(
+                                "0000000000000000000000000000000000000000000000000000000000000000",
+                            )
                             .unwrap_or_else(|_| Hash::from([0u8; 32])),
                             status: CommitStatus::Deleted,
                         });
@@ -164,7 +168,6 @@ impl Commit {
             }
             Some(status_all_files)
         }
-
     }
 }
 
@@ -182,13 +185,19 @@ impl CommittedFile {
 
     pub fn compress_and_store(&self, bucket_path: &PathBuf) -> io::Result<()> {
         let input_path = bucket_path.join(&self.name);
-        let output_path = bucket_path.join(".b").join("storage").join(&self.hash.to_string());
+        let output_path = bucket_path
+            .join(".b")
+            .join("storage")
+            .join(&self.hash.to_string());
 
         compress_and_store_file(&input_path, &output_path, 0)
     }
 
     pub fn restore(&self, bucket_path: &PathBuf) -> io::Result<()> {
-        let input_path = bucket_path.join(".b").join("storage").join(&self.previous_hash.to_string());
+        let input_path = bucket_path
+            .join(".b")
+            .join("storage")
+            .join(&self.previous_hash.to_string());
         let output_path = bucket_path.join(&self.name);
 
         restore_file(&input_path, &output_path)
@@ -198,8 +207,8 @@ impl CommittedFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use serial_test::serial;
+    use std::fs;
     use tempfile::tempdir;
     use uuid::Uuid;
 
@@ -381,10 +390,10 @@ mod tests {
     fn test_committed_file_compress_and_store() -> std::io::Result<()> {
         let temp_dir = tempdir()?;
         let bucket_path = temp_dir.path().to_path_buf();
-        
+
         // Create bucket structure
         fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
-        
+
         // Create test file
         let file_content = "test file content";
         fs::write(bucket_path.join("test.txt"), file_content)?;
@@ -399,9 +408,12 @@ mod tests {
 
         let result = file.compress_and_store(&bucket_path);
         assert!(result.is_ok());
-        
+
         // Check that compressed file exists
-        let compressed_path = bucket_path.join(".b").join("storage").join(file.hash.to_string());
+        let compressed_path = bucket_path
+            .join(".b")
+            .join("storage")
+            .join(file.hash.to_string());
         assert!(compressed_path.exists());
         Ok(())
     }
@@ -410,7 +422,7 @@ mod tests {
     fn test_committed_file_compress_nonexistent_file() -> std::io::Result<()> {
         let temp_dir = tempdir()?;
         let bucket_path = temp_dir.path().to_path_buf();
-        
+
         // Create bucket structure but no test file
         fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
 
@@ -432,22 +444,25 @@ mod tests {
     fn test_committed_file_restore() -> std::io::Result<()> {
         let temp_dir = tempdir()?;
         let bucket_path = temp_dir.path().to_path_buf();
-        
+
         // Create bucket structure
         fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
-        
+
         // Create and compress a test file first
         let file_content = "test restore content";
         fs::write(bucket_path.join("original.txt"), file_content)?;
 
         let hash_string = "test_hash_restore";
         let hash = Hash::from_str(hash_string).unwrap_or_else(|_| Hash::from([0u8; 32]));
-        let compressed_path = bucket_path.join(".b").join("storage").join(hash.to_string());
+        let compressed_path = bucket_path
+            .join(".b")
+            .join("storage")
+            .join(hash.to_string());
 
         // Manually compress the file to simulate stored version
         use crate::utils::compression::compress_and_store_file;
         compress_and_store_file(&bucket_path.join("original.txt"), &compressed_path, 0)?;
-        
+
         // Remove original file
         fs::remove_file(bucket_path.join("original.txt"))?;
 
@@ -461,7 +476,7 @@ mod tests {
 
         let result = file.restore(&bucket_path);
         assert!(result.is_ok());
-        
+
         // Check that file was restored
         assert!(bucket_path.join("restored.txt").exists());
         let restored_content = fs::read_to_string(bucket_path.join("restored.txt"))?;
@@ -473,7 +488,7 @@ mod tests {
     fn test_committed_file_restore_nonexistent_compressed() -> std::io::Result<()> {
         let temp_dir = tempdir()?;
         let bucket_path = temp_dir.path().to_path_buf();
-        
+
         // Create bucket structure but no compressed file
         fs::create_dir_all(bucket_path.join(".b").join("storage"))?;
 
@@ -495,7 +510,7 @@ mod tests {
         let hash = Hash::from([42u8; 32]);
         let hash_string = hash.to_string();
         assert_eq!(hash_string.len(), 64); // 32 bytes = 64 hex chars
-        
+
         let parsed_hash = Hash::from_str(&hash_string);
         assert!(parsed_hash.is_ok());
         assert_eq!(parsed_hash.unwrap(), hash);
@@ -505,7 +520,7 @@ mod tests {
     fn test_hash_from_invalid_string() {
         let invalid_hash = Hash::from_str("invalid_hash_string");
         assert!(invalid_hash.is_err());
-        
+
         let short_hash = Hash::from_str("1234");
         assert!(short_hash.is_err());
     }

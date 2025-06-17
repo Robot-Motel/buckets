@@ -16,9 +16,7 @@ mod tests {
     #[serial]
     fn test_version() {
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
-        cmd.arg("--version")
-            .assert()
-            .success();
+        cmd.arg("--version").assert().success();
     }
 
     #[test]

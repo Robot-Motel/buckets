@@ -1,6 +1,6 @@
 use crate::utils::checks::validate_path;
-use std::path::PathBuf;
 use clap::{Args, Parser, Subcommand};
+use std::path::PathBuf;
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -145,4 +145,3 @@ pub struct SchemaCommand {
     #[clap(flatten)]
     pub shared: SharedArguments,
 }
-

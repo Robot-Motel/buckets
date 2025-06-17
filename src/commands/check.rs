@@ -1,6 +1,6 @@
 use crate::args::CheckCommand;
-use crate::errors::BucketError;
 use crate::commands::BucketCommand;
+use crate::errors::BucketError;
 
 /// Check command placeholder
 pub struct Check {

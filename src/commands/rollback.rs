@@ -2,16 +2,16 @@ use std::io::Error;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 
-use log::error;
 use crate::args::RollbackCommand;
 use crate::commands::commit::Commit;
-use crate::CURRENT_DIR;
+use crate::commands::BucketCommand;
 use crate::data::bucket::{Bucket, BucketTrait};
 use crate::data::commit::CommitStatus;
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::utils::utils::{find_bucket_path, hash_file};
-use crate::commands::BucketCommand;
+use crate::CURRENT_DIR;
+use log::error;
 
 /// Rollback command to revert changes in a bucket
 pub struct Rollback {
@@ -39,14 +39,17 @@ impl BucketCommand for Rollback {
 
         match &self.args.path {
             None => rollback_all(&current_dir),
-            Some(path) => rollback_single_file(&current_dir, &path)
+            Some(path) => rollback_single_file(&current_dir, &path),
         }
     }
 }
 
 fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), BucketError> {
     if !file.exists() {
-        return Err(BucketError::from(Error::new(ErrorKind::NotFound, "File not found.")));
+        return Err(BucketError::from(Error::new(
+            ErrorKind::NotFound,
+            "File not found.",
+        )));
     }
 
     let bucket = Bucket::from_meta_data(bucket_path)?;
@@ -63,10 +66,9 @@ fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), Buc
 
             let file_hash = hash_file(file)?; // Properly propagate error
 
-            let found_file = previous_commit
-                .files
-                .iter()
-                .find(|committed_file| committed_file.name == file_name && committed_file.hash == file_hash);
+            let found_file = previous_commit.files.iter().find(|committed_file| {
+                committed_file.name == file_name && committed_file.hash == file_hash
+            });
 
             match found_file {
                 None => Err(BucketError::from(Error::new(
@@ -89,7 +91,6 @@ fn rollback_single_file(bucket_path: &PathBuf, file: &PathBuf) -> Result<(), Buc
     }
 }
 
-
 fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
     // Read the bucket's metadata
     let bucket = Bucket::from_meta_data(&bucket_path)?;
@@ -101,15 +102,22 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
 
     match Commit::load_last_commit(bucket.name) {
         Ok(None) => {
-            return Err(BucketError::from(Error::new(ErrorKind::NotFound, "No previous commit found.")));
+            return Err(BucketError::from(Error::new(
+                ErrorKind::NotFound,
+                "No previous commit found.",
+            )));
         }
         Ok(Some(previous_commit)) => {
-            let changes = bucket_files.compare(&previous_commit).ok_or_else(|| BucketError::from(Error::new(ErrorKind::Other, "Failed to compare files.")))?;
+            let changes = bucket_files.compare(&previous_commit).ok_or_else(|| {
+                BucketError::from(Error::new(ErrorKind::Other, "Failed to compare files."))
+            })?;
 
             if changes
                 .iter()
                 .filter(|change| change.status == CommitStatus::Modified)
-                .count() == 0 {
+                .count()
+                == 0
+            {
                 println!("No changes detected. Rollback cancelled.");
                 return Ok(());
             }
@@ -125,7 +133,10 @@ fn rollback_all(bucket_path: &PathBuf) -> Result<(), BucketError> {
         }
         Err(_) => {
             error!("Failed to load previous commit.");
-            return Err(BucketError::from(Error::new(ErrorKind::Other, "Failed to load previous commit.")));
+            return Err(BucketError::from(Error::new(
+                ErrorKind::Other,
+                "Failed to load previous commit.",
+            )));
         }
     }
 

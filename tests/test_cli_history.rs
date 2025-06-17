@@ -3,10 +3,10 @@ mod common;
 #[cfg(test)]
 mod acceptance_tests {
     use crate::common::tests::get_test_dir;
+    use predicates::prelude::*;
     use serial_test::serial;
     use std::fs::File;
     use std::io::Write;
-    use predicates::prelude::*;
 
     /// Test the `history` command.
     ///
@@ -21,7 +21,7 @@ mod acceptance_tests {
         // Setup repo with a commit
         let repo_dir = setup();
         let bucket_dir = repo_dir.join("test_bucket");
-        
+
         create_test_file(&bucket_dir, "test_file.txt", "test content");
 
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
@@ -66,7 +66,7 @@ mod acceptance_tests {
             .arg("test commit message 2")
             .assert()
             .success();
-        
+
         let mut cmd = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd.current_dir(&bucket_dir)
             .arg("history")
@@ -74,15 +74,13 @@ mod acceptance_tests {
             .success()
             .stdout(predicate::str::contains("test commit message 1"))
             .stdout(predicate::str::contains("test commit message 2"));
-
-        
     }
-
 
     fn create_test_file(dir: &std::path::Path, filename: &str, content: &str) {
         let file_path = dir.join(filename);
         let mut file = File::create(&file_path).expect("Failed to create file");
-        file.write_all(content.as_bytes()).expect("Failed to write to file");
+        file.write_all(content.as_bytes())
+            .expect("Failed to write to file");
     }
 
     fn setup() -> std::path::PathBuf {

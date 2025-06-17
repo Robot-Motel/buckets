@@ -7,7 +7,6 @@ mod tests {
 
     use tempfile::tempdir;
 
-
     /// Test the `revert` command.
     ///
     /// # Commands

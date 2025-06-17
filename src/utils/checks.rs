@@ -1,6 +1,6 @@
+use log::debug;
 use std::fs;
 use std::path::{Path, PathBuf};
-use log::debug;
 
 /// Searches for a directory with the given name in the parent directories.
 ///
@@ -34,7 +34,6 @@ pub fn find_directory_in_parents(start_path: &Path, target_dir_name: &str) -> Op
 /// Checks if the given directory is a valid bucket repository.
 /// It verifies the presence of a `.buckets` directory and a valid `buckets.db` DuckDB database file.
 pub fn is_valid_bucket_repo(dir_path: &Path) -> bool {
-
     debug!("{:?}", dir_path);
     // Find the .buckets directory
     let buckets_repo_path = find_directory_in_parents(dir_path, ".buckets");
@@ -104,9 +103,6 @@ fn has_valid_bucket_info(bucket_path: &PathBuf) -> bool {
     false
 }
 
-
-
-
 pub fn is_valid_repo_config(dir_path: &Path) -> bool {
     let config_path = dir_path.join("config");
     if config_path.is_file() {
@@ -134,20 +130,21 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
     };
 
     if !resolved_path.exists() {
-        Err(format!("The path '{}' does not exist.", resolved_path.display()))
+        Err(format!(
+            "The path '{}' does not exist.",
+            resolved_path.display()
+        ))
     } else if !resolved_path.is_file() {
         Err(format!("'{}' is not a file.", resolved_path.display()))
     } else {
         Ok(resolved_path)
     }
-
 }
 
-
+use crate::utils::utils::find_bucket_path;
+use crate::CURRENT_DIR;
 #[cfg(test)]
 use tempfile::tempdir;
-use crate::CURRENT_DIR;
-use crate::utils::utils::find_bucket_path;
 
 #[cfg(test)]
 mod tests {
@@ -222,7 +219,6 @@ mod tests {
 
         // Case 1: No `.buckets` directory
         assert!(!is_valid_bucket_repo(temp_dir.path()));
-
     }
 
     #[test]
@@ -230,10 +226,9 @@ mod tests {
         // Create a temporary directory to simulate a bucket repository
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let buckets_dir = temp_dir.path().join(".buckets");
-        
+
         fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
         assert!(!is_valid_bucket_repo(temp_dir.path()));
-
     }
 
     #[test]
@@ -246,7 +241,6 @@ mod tests {
         fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
         fs::File::create(&config_path).expect("Failed to create config file");
         assert!(!is_valid_bucket_repo(temp_dir.path()));
-
     }
 
     #[test]
@@ -260,11 +254,11 @@ mod tests {
         fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
         fs::File::create(&config_path).expect("Failed to create config file");
         let conn = duckdb::Connection::open(&db_path).expect("Failed to create DuckDB connection");
-        conn.execute("CREATE TABLE test (id INTEGER);", []).expect("error executing sql"); // Create a valid table
+        conn.execute("CREATE TABLE test (id INTEGER);", [])
+            .expect("error executing sql"); // Create a valid table
         conn.close().expect("Failed to close DuckDB connection");
 
         assert!(is_valid_bucket_repo(temp_dir.path()));
-
     }
 
     #[test]
