@@ -138,7 +138,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
     use std::fs::create_dir_all;
     use tempfile::tempdir;
 
@@ -656,17 +655,19 @@ mod tests {
         Ok(())
     }
 
-    /// Get the database path without opening a connection
-    pub fn get_db_path() -> Result<std::path::PathBuf, BucketError> {
-        let current_dir = env::current_dir()?;
+}
 
-        match find_directory_in_parents(&current_dir, ".buckets") {
-            Some(path) => Ok(path.join("buckets.db")),
-            None => Err(BucketError::NotInRepo),
-        }
+/// Get the database path without opening a connection
+pub fn get_db_path() -> Result<std::path::PathBuf, BucketError> {
+    let current_dir = env::current_dir()?;
+
+    match find_directory_in_parents(&current_dir, ".buckets") {
+        Some(path) => Ok(path.join("buckets.db")),
+        None => Err(BucketError::NotInRepo),
     }
-    /// Create a database connection from a path (useful for reusing path lookups)
-    pub fn connect_to_db_with_path(db_path: &std::path::Path) -> Result<Connection, BucketError> {
-        Connection::open(db_path).map_err(BucketError::DuckDB)
-    }
+}
+
+/// Create a database connection from a path (useful for reusing path lookups)
+pub fn connect_to_db_with_path(db_path: &std::path::Path) -> Result<Connection, BucketError> {
+    Connection::open(db_path).map_err(BucketError::DuckDB)
 }
