@@ -5,10 +5,9 @@ pub mod tests {
 
     #[allow(dead_code)]
     pub fn get_test_dir() -> PathBuf {
-        let temp_dir = match std::env::var("TEST_DIR") {
+        match std::env::var("TEST_DIR") {
             Ok(val) => PathBuf::from(val),
             Err(_) => tempdir().expect("error creating temp dir").keep(),
-        };
-        temp_dir
+        }
     }
 }
