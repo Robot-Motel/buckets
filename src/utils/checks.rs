@@ -134,7 +134,7 @@ pub fn validate_path(path: &str) -> Result<PathBuf, String> {
     
     // Use secure path validation
     let resolved_path = validate_and_canonicalize_path(&path_buf, base_dir.as_deref())
-        .map_err(|e| e.message())?;
+        .map_err(|e| e.to_string())?;
 
     if !resolved_path.exists() {
         Err(format!(

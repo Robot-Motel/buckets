@@ -31,28 +31,6 @@ pub enum BucketError {
     PathValidationError(String),
 }
 
-impl BucketError {
-    pub(crate) fn message(&self) -> String {
-        match self {
-            BucketError::IoError(e) => format!("IO Error: {}", e),
-            BucketError::DuckDB(e) => format!("Database Error: {}", e),
-            BucketError::BucketAlreadyExists => "Bucket already exists".to_string(),
-            BucketError::RepoAlreadyExists(message) => {
-                format!("Repository {} already exists", message)
-            }
-            BucketError::NotInRepo => "Not in a buckets repository".to_string(),
-            BucketError::NotInBucket => "Not in a bucket".to_string(),
-            // BucketError::InBucketRepo => "Already in a bucket repository".to_string(),
-            BucketError::NotAValidBucket => "Not a valid bucket".to_string(),
-            BucketError::InvalidBucketName(message) => format!("Invalid bucket name: {}", message),
-            BucketError::InvalidData(message) => format!("Invalid data {}", message),
-            BucketError::NotFound(message) => format!("Not found {}", message),
-            BucketError::FileNotFound(message) => format!("File not found {}", message),
-            BucketError::SecurityError(message) => format!("Security error: {}", message),
-            BucketError::PathValidationError(message) => format!("Path validation error: {}", message),
-        }
-    }
-}
 
 impl From<&str> for BucketError {
     fn from(error: &str) -> Self {
@@ -72,35 +50,35 @@ mod tests {
     use std::io;
 
     #[test]
-    fn test_bucket_error_message_formatting() {
+    fn test_bucket_error_display_formatting() {
         assert_eq!(
-            BucketError::BucketAlreadyExists.message(),
+            format!("{}", BucketError::BucketAlreadyExists),
             "Bucket already exists"
         );
         assert_eq!(
-            BucketError::RepoAlreadyExists("test_repo".to_string()).message(),
+            format!("{}", BucketError::RepoAlreadyExists("test_repo".to_string())),
             "Repository test_repo already exists"
         );
         assert_eq!(
-            BucketError::NotInRepo.message(),
+            format!("{}", BucketError::NotInRepo),
             "Not in a buckets repository"
         );
-        assert_eq!(BucketError::NotInBucket.message(), "Not in a bucket");
-        assert_eq!(BucketError::NotAValidBucket.message(), "Not a valid bucket");
+        assert_eq!(format!("{}", BucketError::NotInBucket), "Not in a bucket");
+        assert_eq!(format!("{}", BucketError::NotAValidBucket), "Not a valid bucket");
         assert_eq!(
-            BucketError::InvalidBucketName("cannot be empty".to_string()).message(),
+            format!("{}", BucketError::InvalidBucketName("cannot be empty".to_string())),
             "Invalid bucket name: cannot be empty"
         );
         assert_eq!(
-            BucketError::InvalidData("corrupted".to_string()).message(),
+            format!("{}", BucketError::InvalidData("corrupted".to_string())),
             "Invalid data corrupted"
         );
         assert_eq!(
-            BucketError::NotFound("file.txt".to_string()).message(),
+            format!("{}", BucketError::NotFound("file.txt".to_string())),
             "Not found file.txt"
         );
         assert_eq!(
-            BucketError::FileNotFound("missing.txt".to_string()).message(),
+            format!("{}", BucketError::FileNotFound("missing.txt".to_string())),
             "File not found missing.txt"
         );
     }
@@ -152,11 +130,12 @@ mod tests {
     }
 
     #[test]
-    fn test_io_error_message() {
+    fn test_io_error_display() {
         let io_error = io::Error::new(io::ErrorKind::PermissionDenied, "access denied");
         let bucket_error = BucketError::IoError(io_error);
-        assert!(bucket_error.message().contains("IO Error:"));
-        assert!(bucket_error.message().contains("access denied"));
+        let display_str = format!("{}", bucket_error);
+        assert!(display_str.contains("IO Error:"));
+        assert!(display_str.contains("access denied"));
     }
 
     #[test]

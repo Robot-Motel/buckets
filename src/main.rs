@@ -45,7 +45,7 @@ fn main() -> ExitCode {
 
     if let Err(msg) = res {
         set_failed();
-        eprintln!("{}", msg.message());
+        eprintln!("{}", msg);
     }
 
     EXIT.with(|cell| cell.get())
