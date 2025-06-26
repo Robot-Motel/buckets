@@ -7,6 +7,8 @@ pub enum BucketError {
     IoError(#[from] io::Error),
     #[error("Database Error: {0}")]
     DuckDB(#[from] duckdb::Error),
+    #[error("Database Error: {0}")]
+    DatabaseError(String),
     #[error("Bucket already exists")]
     BucketAlreadyExists,
     #[error("Repository {0} already exists")]

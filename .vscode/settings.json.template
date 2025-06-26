@@ -5,5 +5,6 @@
     "testExplorer.onReload": "reset",
     "testExplorer.onStart": "reset",
     "testExplorer.sort": "byLocationWithSuitesFirst",
-    "testExplorer.useNativeTesting": false
+    "testExplorer.useNativeTesting": false,
+    "rust-analyzer.cargo.features": ["postgres"]
 }

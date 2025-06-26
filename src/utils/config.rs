@@ -55,6 +55,7 @@ mod tests {
         let init_cmd = crate::commands::init::Init::new(&crate::args::InitCommand {
             shared: crate::args::SharedArguments::default(),
             repo_name: "test".to_string(),
+            database: "duckdb".to_string(),
         });
         init_cmd
             .create_config_file(&buckets_dir.as_path())
@@ -157,6 +158,7 @@ url_check = "custom.check.url"
         let init_cmd = crate::commands::init::Init::new(&crate::args::InitCommand {
             shared: crate::args::SharedArguments::default(),
             repo_name: "test".to_string(),
+            database: "duckdb".to_string(),
         });
         init_cmd
             .create_config_file(&buckets_dir.as_path())

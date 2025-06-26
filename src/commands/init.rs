@@ -1,10 +1,10 @@
 use crate::args::InitCommand;
 use crate::commands::BucketCommand;
 use crate::config::Config;
+use crate::database::{DatabaseType, initialize_database};
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::CURRENT_DIR;
-use duckdb::Connection;
 use log::debug;
 use std::io::Write;
 use std::path::Path;
@@ -44,7 +44,9 @@ impl Init {
 
         fs::create_dir_all(&repo_buckets_path)?;
         self.create_config_file(&repo_buckets_path)?;
-        self.create_database(&repo_buckets_path)?;
+        
+        let db_type = DatabaseType::from_str(&self.args.database)?;
+        initialize_database(&repo_buckets_path, db_type)?;
 
         Ok(())
     }
@@ -76,17 +78,6 @@ impl Init {
         Ok(())
     }
 
-    fn create_database(&self, location: &Path) -> Result<(), BucketError> {
-        let db_path = location.join("buckets.db");
-        let connection = Connection::open(db_path)?;
-
-        // The schema.sql file must be in the same directory as this source file
-        let schema = include_str!("../sql/schema.sql");
-
-        connection.execute_batch(schema)?;
-
-        Ok(())
-    }
 
     fn checks(&self, repo_name: &str) -> Result<(), BucketError> {
         let repo_path = CURRENT_DIR.with(|dir| dir.join(repo_name));

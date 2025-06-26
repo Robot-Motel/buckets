@@ -12,6 +12,7 @@ mod args;
 mod commands;
 mod config;
 mod data;
+mod database;
 mod errors;
 mod utils;
 mod world;
