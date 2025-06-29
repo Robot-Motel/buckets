@@ -23,12 +23,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rustup using win.rustup.rs
+      - name: Install Rustup (Windows)
+        if: runner.os == 'Windows'
         run: |
           Invoke-WebRequest "https://win.rustup.rs/x86_64" -OutFile rustup-init.exe
           .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc --profile=minimal
           rustup toolchain install stable --profile minimal
           del rustup-init.exe
+
+      - name: Install Rustup (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile=minimal
+          source ~/.cargo/env
+          rustup toolchain install stable --profile minimal
 
       - run: rustup toolchain install stable --profile minimal
       - uses: Swatinem/rust-cache@v2
