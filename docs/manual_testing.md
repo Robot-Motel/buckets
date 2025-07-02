@@ -1,42 +1,72 @@
-# Manual Tests
+# Manual Test Plan for Buckets CLI
 
-## Preparation
+## Test Environment Setup
 
-On Windows you can create an alias for the `bucket.exe` command
+### Prerequisites
+- Rust toolchain installed
+- DuckDB CLI (for database verification)
+- PostgreSQL client tools (for PostgreSQL tests)
 
+### Installation Methods
+
+#### Option 1: Direct Installation
 ```bash
-cd buckets # Go into the root of the bucket repository
-cargo install --path . # Install buckets
-Get-Command buckets.exe # Gives the location
-Set-Alias buckets "C:\Users\WindowsUser\.cargo\bin\buckets.exe" # Create alias
-winget install DuckDB.cli # Install command line DuckDB
-buckets --version # Check version
+cd buckets
+cargo install --path .
+buckets --version
 ```
 
-## Initialize a repository
-
-### Steps
-
+#### Option 2: Development Build
 ```bash
-buckets init test_repo
+cd buckets
+cargo build --release
+./target/release/buckets --version
 ```
 
-### Expected results
-
-Directory structure and files
-
-```bash
-./test_repo/
-./test_repo/.buckets/
-./test_repo/.buckets/buckets.db
-./test_repo/.buckets/config
+#### Option 3: Windows-specific Setup
+```powershell
+cd buckets
+cargo install --path .
+Get-Command buckets.exe
+Set-Alias buckets "C:\Users\WindowsUser\.cargo\bin\buckets.exe"
+winget install DuckDB.cli
+buckets --version
 ```
 
-`buckets.db` is a DuckDB database
+## Test Suite
 
+### TC001: Repository Initialization - Default (DuckDB)
+
+**Objective:** Verify repository initialization with default DuckDB backend
+
+**Preconditions:** Clean test environment
+
+**Test Steps:**
 ```bash
-duckdb ./test_repo/.buckets/buckets.db
+buckets init test_repo_duckdb
+```
+
+**Expected Results:**
+- Exit code: 0
+- Console output: "Bucket repository initialized successfully."
+- Directory structure:
+  ```
+  ./test_repo_duckdb/
+  ./test_repo_duckdb/.buckets/
+  ./test_repo_duckdb/.buckets/buckets.db
+  ./test_repo_duckdb/.buckets/config
+  ./test_repo_duckdb/.buckets/database_type
+  ```
+- Database type file contains: `duckdb`
+- `buckets.db` is a valid DuckDB database with correct schema
+
+**Database Schema Verification:**
+```bash
+duckdb ./test_repo_duckdb/.buckets/buckets.db
 D show tables;
+```
+Expected output:
+```
 ┌─────────┐
 │  name   │
 │ varchar │
@@ -45,140 +75,266 @@ D show tables;
 │ commits │
 │ files   │
 └─────────┘
-D describe buckets;
-┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
-│ column_name │ column_type │  null   │   key   │ default │  extra  │
-│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
-├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
-│ id          │ UUID        │ NO      │ PRI     │         │         │
-│ name        │ VARCHAR     │ NO      │         │         │         │
-│ path        │ VARCHAR     │ NO      │         │         │         │
-└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
-D describe commits;
-┌─────────────┬─────────────┬─────────┬─────────┬───────────────────┬─────────┐
-│ column_name │ column_type │  null   │   key   │      default      │  extra  │
-│   varchar   │   varchar   │ varchar │ varchar │      varchar      │ varchar │
-├─────────────┼─────────────┼─────────┼─────────┼───────────────────┼─────────┤
-│ id          │ UUID        │ NO      │ PRI     │                   │         │
-│ bucket_id   │ UUID        │ NO      │         │                   │         │
-│ message     │ VARCHAR     │ NO      │         │                   │         │
-│ created_at  │ TIMESTAMP   │ NO      │         │ CURRENT_TIMESTAMP │         │
-└─────────────┴─────────────┴─────────┴─────────┴───────────────────┴─────────┘
-D describe files
-┌─────────────┬─────────────┬─────────┬─────────┬─────────┬─────────┐
-│ column_name │ column_type │  null   │   key   │ default │  extra  │
-│   varchar   │   varchar   │ varchar │ varchar │ varchar │ varchar │
-├─────────────┼─────────────┼─────────┼─────────┼─────────┼─────────┤
-│ id          │ UUID        │ NO      │ PRI     │         │         │
-│ commit_id   │ UUID        │ NO      │ UNI     │         │         │
-│ file_path   │ VARCHAR     │ NO      │ UNI     │         │         │
-│ hash        │ VARCHAR     │ NO      │ UNI     │         │         │
-└─────────────┴─────────────┴─────────┴─────────┴─────────┴─────────┘
-D select * from buckets;
-┌──────┬─────────┬─────────┐
-│  id  │  name   │  path   │
-│ uuid │ varchar │ varchar │
-├──────┴─────────┴─────────┤
-│          0 rows          │
-└──────────────────────────┘
 ```
 
-## Create bucket
+**Post-conditions:** Repository ready for bucket creation
 
-### Steps
+---
 
+### TC002: Repository Initialization - PostgreSQL Backend
+
+**Objective:** Verify repository initialization with PostgreSQL backend
+
+**Preconditions:** 
+- Clean test environment
+- Build with postgres feature: `cargo build --features postgres`
+
+**Test Steps:**
 ```bash
+./target/debug/buckets init test_repo_postgres --database postgresql
+```
+
+**Expected Results:**
+- Exit code: 0
+- Console output: "Bucket repository initialized successfully."
+- Directory structure:
+  ```
+  ./test_repo_postgres/
+  ./test_repo_postgres/.buckets/
+  ./test_repo_postgres/.buckets/config
+  ./test_repo_postgres/.buckets/database_type
+  ./test_repo_postgres/.buckets/postgres_data/
+  ```
+- Database type file contains: `postgresql`
+- PostgreSQL data directory created
+
+**Post-conditions:** Repository ready for bucket creation
+
+---
+
+### TC003: Database Option Validation
+
+**Objective:** Verify proper validation of database type parameter
+
+**Test Cases:**
+
+#### TC003a: Valid Database Types
+```bash
+buckets init test_valid_duckdb --database duckdb      # Should succeed
+buckets init test_valid_postgres --database postgres  # Should succeed  
+buckets init test_valid_postgresql --database postgresql # Should succeed
+```
+
+#### TC003b: Invalid Database Type
+```bash
+buckets init test_invalid --database mysql
+```
+**Expected Results:**
+- Exit code: non-zero
+- Error message: "Invalid database type 'mysql'. Valid options are: duckdb, postgresql"
+
+#### TC003c: PostgreSQL Without Feature Flag
+```bash
+# Build without postgres feature
+cargo build
+./target/debug/buckets init test_no_feature --database postgresql
+```
+**Expected Results:**
+- Exit code: non-zero  
+- Error message: "PostgreSQL support not compiled in. Build with --features postgres to enable."
+
+---
+
+**Objective:** Verify bucket creation functionality
+
+**Preconditions:** Valid repository initialized (from TC001 or TC002)
+
+**Test Steps:**
+```bash
+cd test_repo_duckdb  # or test_repo_postgres
 buckets create test_bucket
 ```
 
-### Expected results
+**Expected Results:**
+- Exit code: 0
+- Console output indicating successful bucket creation
+- Database verification (DuckDB example):
+  ```bash
+  duckdb ./.buckets/buckets.db
+  D select * from buckets;
+  ```
+  Expected: Single row with UUID, name="test_bucket", path="test_bucket"
 
-UUID will be different
+**Post-conditions:** Bucket ready for file operations
 
-```bash
-duckdb ./test_repo/.buckets/buckets.db
-D select * from buckets
-┌──────────────────────────────────────┬─────────────┬─────────────┐
-│                  id                  │    name     │    path     │
-│                 uuid                 │   varchar   │   varchar   │
-├──────────────────────────────────────┼─────────────┼─────────────┤
-│ c1fdcb0b-757e-4631-bbb6-272c98b49424 │ test_bucket │ test_bucket │
-└──────────────────────────────────────┴─────────────┴─────────────┘
-```
+---
 
-## Commit file
+### TC005: File Commit Operations
 
-### Steps
+**Objective:** Verify file commit functionality across database backends
 
+**Preconditions:** Bucket created (from TC004)
+
+**Test Steps:**
 ```bash
 cd test_bucket
-New-Item boat.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\boat.blend
+echo "This is a test file" > test_file.txt
+buckets commit "Add test file"
+```
+
+**Expected Results:**
+- Exit code: 0
+- File storage directory created: `./.b/storage/`
+- Database records updated in commits and files tables
+- File hash correctly stored
+
+**Database Verification:**
+```bash
+# For DuckDB
+duckdb ../.buckets/buckets.db
+D select * from commits;
+D select * from files;
+
+# For PostgreSQL  
+# Connect using appropriate PostgreSQL client with embedded server URL
+```
+
+---
+
+### TC006: Cross-Platform Compatibility
+
+**Objective:** Verify functionality across different operating systems
+
+#### TC006a: Unix/Linux Commands
+```bash
+cd test_bucket
+touch boat.blend
+echo "Blender file content" > boat.blend
 buckets commit "new boat"
 ```
 
-### Expected results
-
-#### Files and directories
-
-```bash
-./test_repo/test_bucket/
-./test_repo/test_bucket/.b/
-./test_repo/test_bucket/.b/info
-./test_repo/test_bucket/.b/storage/
-./test_repo/test_bucket/.b/storage/1496dd00f4648d8c368...
+#### TC006b: Windows Commands  
+```powershell
+cd test_bucket
+New-Item boat.blend -ItemType File
+"Blender file content" | Out-File -FilePath .\boat.blend
+buckets commit "new boat"
 ```
 
-#### Database
+**Expected Results:** Consistent behavior across platforms
 
-```bash
-duckdb .\test_repo\.buckets\buckets.db
-select * from commits;
-┌──────────────────────────────────────┬──────────────────────────────────────┬─────────────────┬─────────────────────────┐
-│                  id                  │              bucket_id               │ message         │       created_at        │
-│                 uuid                 │                 uuid                 │ varchar         │        timestamp        │
-├──────────────────────────────────────┼──────────────────────────────────────┼─────────────────┼─────────────────────────┤
-│ 2d7a0558-f206-4659-9629-3bec710f984f │ c1fdcb0b-757e-4631-bbb6-272c98b49424 │ new boat        │ 2024-09-27 14:54:52.097 │
-└──────────────────────────────────────┴──────────────────────────────────────┴─────────────────┴─────────────────────────┘
-select * from files;
-┌──────────────────────┬─────────────────────────────────────┬────────────┬──────────────────────────────────────────────────────────────────┐
-│          id          │              commit_id              │ file_path  │                               hash                               │
-│         uuid         │                uuid                 │  varchar   │                             varchar                              │
-├──────────────────────┼─────────────────────────────────────┼────────────┼──────────────────────────────────────────────────────────────────┤
-│ c687a296-272f-46c9.  │ 2d7a0558-f206-4659-9629-3bec710f9.  │ boat.blend │ 1496dd00f4648d8c36876585488eb09efc7428c499223e96664e520fb27fc9e3 │
-└──────────────────────┴─────────────────────────────────────┴────────────┴──────────────────────────────────────────────────────────────────┘
-```
+---
 
-## Status
+### TC007: Status and File Tracking
 
+**Objective:** Verify status reporting functionality
+
+**Test Steps:**
 ```bash
 cd test_bucket
-New-Item anchor.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\anchor.blend
+echo "New file" > anchor.blend
 buckets commit "new anchor"
-New-Item rudder.blend -ItemType File; "This is a blend file" | Out-File -FilePath .\rudder.blend
-"This is a blend file for the boat" | Out-File -FilePath .\boat.blend
+echo "Modified content" > anchor.blend
+touch rudder.blend
 buckets status
 ```
 
-## Expected results
-
-```bash
-committed:    anchor.blend
-modified:    boat.blend
-new:    rudder.blend
+**Expected Results:**
+```
+committed:    [previously committed files]
+modified:     anchor.blend
+new:          rudder.blend
 ```
 
-## Rollback
+---
 
+### TC008: Rollback Functionality
+
+**Objective:** Verify rollback operations
+
+**Test Steps:**
 ```bash
 buckets rollback
 buckets status
 ```
 
-## Expected results
+**Expected Results:**
+- Modified files restored to committed state
+- Status shows clean working directory for committed files
+- New files remain untracked
 
+---
+
+### TC009: Help and Documentation
+
+**Objective:** Verify help system functionality
+
+**Test Cases:**
 ```bash
-committed:    anchor.blend
-committed:    boat.blend
-new:    rudder.blend
+buckets --help                           # General help
+buckets init --help                      # Init command help  
+buckets create --help                    # Create command help
+buckets commit --help                    # Commit command help
 ```
+
+**Expected Results:** 
+- Comprehensive help text displayed
+- Database option documented for init command
+- All required parameters clearly indicated
+
+---
+
+### TC010: Error Handling and Edge Cases
+
+**Objective:** Verify robust error handling
+
+#### TC010a: Duplicate Repository
+```bash
+buckets init existing_repo
+buckets init existing_repo  # Should fail
+```
+
+#### TC010b: Operations Outside Repository
+```bash
+mkdir /tmp/not_a_repo
+cd /tmp/not_a_repo  
+buckets create test_bucket  # Should fail
+```
+
+#### TC010c: Invalid Bucket Names
+```bash
+buckets create ""           # Empty name
+buckets create "invalid/name"  # Invalid characters
+```
+
+**Expected Results:** Appropriate error messages and non-zero exit codes
+
+---
+
+## Test Execution Guidelines
+
+### Pre-Test Setup
+1. Clean environment with no existing test repositories
+2. Verify Rust toolchain and dependencies installed
+3. Build application with and without postgres feature
+4. Prepare test data files as needed
+
+### Test Data Management  
+- Use consistent test file names and content
+- Verify file hashes match expected values
+- Clean up test repositories between test runs
+
+### Pass/Fail Criteria
+- **PASS:** All expected results achieved, exit codes correct
+- **FAIL:** Any expected result not achieved, incorrect exit codes
+- **BLOCKED:** Cannot execute due to environment/dependency issues
+
+### Reporting
+Document for each test case:
+- Test case ID and description
+- Execution timestamp
+- Pass/Fail status
+- Actual results vs expected results  
+- Screenshots/logs for failures
+- Environment details (OS, Rust version, etc.)
 
