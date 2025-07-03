@@ -33,7 +33,6 @@ pub enum BucketError {
     PathValidationError(String),
 }
 
-
 impl From<&str> for BucketError {
     fn from(error: &str) -> Self {
         BucketError::IoError(io::Error::new(io::ErrorKind::Other, error))
@@ -58,7 +57,10 @@ mod tests {
             "Bucket already exists"
         );
         assert_eq!(
-            format!("{}", BucketError::RepoAlreadyExists("test_repo".to_string())),
+            format!(
+                "{}",
+                BucketError::RepoAlreadyExists("test_repo".to_string())
+            ),
             "Repository test_repo already exists"
         );
         assert_eq!(
@@ -66,9 +68,15 @@ mod tests {
             "Not in a buckets repository"
         );
         assert_eq!(format!("{}", BucketError::NotInBucket), "Not in a bucket");
-        assert_eq!(format!("{}", BucketError::NotAValidBucket), "Not a valid bucket");
         assert_eq!(
-            format!("{}", BucketError::InvalidBucketName("cannot be empty".to_string())),
+            format!("{}", BucketError::NotAValidBucket),
+            "Not a valid bucket"
+        );
+        assert_eq!(
+            format!(
+                "{}",
+                BucketError::InvalidBucketName("cannot be empty".to_string())
+            ),
             "Invalid bucket name: cannot be empty"
         );
         assert_eq!(

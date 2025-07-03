@@ -191,16 +191,23 @@ impl Commit {
     fn list_files_with_metadata_in_bucket(&self, bucket_path: PathBuf) -> io::Result<CommitData> {
         let mut files = Vec::new();
 
-        for entry in find_files_excluding_top_level_b(bucket_path.as_path()) {
-            let path = entry.as_path();
+        // Extract bucket name from the bucket path
+        let bucket_name = bucket_path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("")
+            .to_string();
 
-            if path.is_file() {
-                match hash_file(path) {
+        for entry in find_files_excluding_top_level_b(bucket_path.as_path()) {
+            let full_path = bucket_path.join(&entry);
+
+            if full_path.is_file() || full_path.is_symlink() {
+                match hash_file(&full_path) {
                     Ok(hash) => {
                         //println!("BLAKE3 hash: {}", hash);
                         files.push(CommittedFile {
-                            id: Default::default(),
-                            name: path.to_string_lossy().into_owned(),
+                            id: Uuid::new_v4(),
+                            name: entry.to_string_lossy().into_owned(),
                             hash,
                             previous_hash: Hash::from_str(
                                 "0000000000000000000000000000000000000000000000000000000000000000",
@@ -211,7 +218,7 @@ impl Commit {
                                     format!("Invalid hash format: {}", e),
                                 )
                             })?,
-                            status: CommitStatus::Unknown,
+                            status: CommitStatus::New,
                         });
                     }
                     Err(e) => {
@@ -225,7 +232,7 @@ impl Commit {
         }
 
         Ok(CommitData {
-            bucket: "".to_string(),
+            bucket: bucket_name,
             files,
             timestamp: chrono::Utc::now().to_rfc3339(),
             previous: None,
@@ -382,5 +389,455 @@ mod tests {
                 panic!("Error processing files: {}", e);
             }
         }
+    }
+
+    // Helper function to create a test commit command
+    fn create_test_commit_command(message: &str) -> Commit {
+        let args = crate::args::CommitCommand {
+            shared: crate::args::SharedArguments::default(),
+            message: message.to_string(),
+        };
+        Commit::new(&args)
+    }
+
+    // Helper function to create a test bucket directory structure
+    fn create_test_bucket_structure(
+    ) -> Result<(tempfile::TempDir, std::path::PathBuf), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let bucket_path = temp_dir.path().join("test_bucket");
+        std::fs::create_dir_all(&bucket_path)?;
+
+        // Create .b directory structure
+        let b_dir = bucket_path.join(".b");
+        std::fs::create_dir_all(&b_dir)?;
+        std::fs::create_dir_all(b_dir.join("storage"))?;
+
+        // Create bucket info file
+        let info_path = b_dir.join("info");
+        let bucket_info = crate::data::bucket::Bucket {
+            id: Uuid::new_v4(),
+            name: "test_bucket".to_string(),
+            relative_bucket_path: std::path::PathBuf::from("test_bucket"),
+        };
+        let info_content = toml::to_string(&bucket_info)?;
+        std::fs::write(&info_path, info_content)?;
+
+        Ok((temp_dir, bucket_path))
+    }
+
+    #[test]
+    fn test_commit_new() {
+        let commit = create_test_commit_command("test message");
+        assert_eq!(commit.args.message, "test message");
+    }
+
+    #[test]
+    fn test_list_files_with_metadata_in_bucket() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        // Create some test files
+        let file1_path = bucket_path.join("file1.txt");
+        let file2_path = bucket_path.join("file2.txt");
+        let subdir_path = bucket_path.join("subdir");
+        std::fs::create_dir_all(&subdir_path).expect("Failed to create subdir");
+        let file3_path = subdir_path.join("file3.txt");
+
+        std::fs::write(&file1_path, "content1").expect("Failed to write file1");
+        std::fs::write(&file2_path, "content2").expect("Failed to write file2");
+        std::fs::write(&file3_path, "content3").expect("Failed to write file3");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.bucket, "test_bucket");
+        assert_eq!(commit_data.files.len(), 3);
+
+        // Check that files are present
+        let file_names: Vec<String> = commit_data.files.iter().map(|f| f.name.clone()).collect();
+        assert!(file_names.contains(&"file1.txt".to_string()));
+        assert!(file_names.contains(&"file2.txt".to_string()));
+        assert!(file_names.contains(&"subdir/file3.txt".to_string()));
+    }
+
+    #[test]
+    fn test_list_files_with_metadata_empty_bucket() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.bucket, "test_bucket");
+        assert_eq!(commit_data.files.len(), 0);
+    }
+
+    #[test]
+    fn test_list_files_with_metadata_ignores_b_directory() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        // Create files in .b directory (should be ignored)
+        let b_file_path = bucket_path.join(".b").join("internal_file.txt");
+        std::fs::write(&b_file_path, "internal content").expect("Failed to write .b file");
+
+        // Create regular file (should be included)
+        let regular_file_path = bucket_path.join("regular_file.txt");
+        std::fs::write(&regular_file_path, "regular content")
+            .expect("Failed to write regular file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+        assert_eq!(commit_data.files[0].name, "regular_file.txt");
+    }
+
+    #[test]
+    fn test_list_files_with_metadata_calculates_hash() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("test_file.txt");
+        let file_content = "test content for hashing";
+        std::fs::write(&file_path, file_content).expect("Failed to write test file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        assert_eq!(file.name, "test_file.txt");
+        assert_eq!(file.status, CommitStatus::New);
+
+        // Verify hash is calculated correctly
+        let expected_hash = blake3::hash(file_content.as_bytes());
+        assert_eq!(file.hash, expected_hash);
+    }
+
+    #[test]
+    fn test_list_files_with_metadata_nonexistent_bucket() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let nonexistent_bucket_path = temp_dir.path().join("nonexistent_bucket");
+        // Don't create the directory - this should result in an empty bucket
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(nonexistent_bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 0);
+        assert_eq!(commit_data.bucket, "nonexistent_bucket");
+    }
+
+    #[test]
+    fn test_committed_file_hash_consistency() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("consistency_test.txt");
+        let file_content = "consistent content";
+        std::fs::write(&file_path, file_content).expect("Failed to write test file");
+
+        let commit = create_test_commit_command("test message");
+
+        // List files multiple times and verify hash consistency
+        let result1 = commit
+            .list_files_with_metadata_in_bucket(bucket_path.clone())
+            .unwrap();
+        let result2 = commit
+            .list_files_with_metadata_in_bucket(bucket_path.clone())
+            .unwrap();
+
+        assert_eq!(result1.files.len(), 1);
+        assert_eq!(result2.files.len(), 1);
+        assert_eq!(result1.files[0].hash, result2.files[0].hash);
+        assert_eq!(result1.files[0].name, result2.files[0].name);
+    }
+
+    #[test]
+    fn test_committed_file_different_content_different_hash() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("changing_file.txt");
+        let commit = create_test_commit_command("test message");
+
+        // Write initial content and get hash
+        std::fs::write(&file_path, "initial content").expect("Failed to write initial content");
+        let result1 = commit
+            .list_files_with_metadata_in_bucket(bucket_path.clone())
+            .unwrap();
+
+        // Change content and get new hash
+        std::fs::write(&file_path, "changed content").expect("Failed to write changed content");
+        let result2 = commit
+            .list_files_with_metadata_in_bucket(bucket_path.clone())
+            .unwrap();
+
+        assert_eq!(result1.files.len(), 1);
+        assert_eq!(result2.files.len(), 1);
+        assert_ne!(result1.files[0].hash, result2.files[0].hash);
+        assert_eq!(result1.files[0].name, result2.files[0].name);
+    }
+
+    #[test]
+    fn test_committed_file_large_file_handling() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("large_file.txt");
+        let large_content = "x".repeat(10000); // 10KB file
+        std::fs::write(&file_path, &large_content).expect("Failed to write large file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        assert_eq!(file.name, "large_file.txt");
+
+        // Verify hash is calculated correctly for large file
+        let expected_hash = blake3::hash(large_content.as_bytes());
+        assert_eq!(file.hash, expected_hash);
+    }
+
+    #[test]
+    fn test_committed_file_binary_file_handling() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("binary_file.bin");
+        let binary_content = vec![0u8, 1u8, 2u8, 255u8, 128u8]; // Binary data
+        std::fs::write(&file_path, &binary_content).expect("Failed to write binary file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        assert_eq!(file.name, "binary_file.bin");
+
+        // Verify hash is calculated correctly for binary file
+        let expected_hash = blake3::hash(&binary_content);
+        assert_eq!(file.hash, expected_hash);
+    }
+
+    #[test]
+    fn test_committed_file_nested_directories() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        // Create nested directory structure
+        let nested_dir = bucket_path.join("level1").join("level2").join("level3");
+        std::fs::create_dir_all(&nested_dir).expect("Failed to create nested directories");
+
+        let file_path = nested_dir.join("nested_file.txt");
+        std::fs::write(&file_path, "nested content").expect("Failed to write nested file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        assert_eq!(file.name, "level1/level2/level3/nested_file.txt");
+        assert_eq!(file.status, CommitStatus::New);
+    }
+
+    #[test]
+    fn test_committed_file_permissions() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("permissions_test.txt");
+        std::fs::write(&file_path, "permissions content").expect("Failed to write file");
+
+        // Change file permissions (Unix-like systems)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(&file_path).unwrap().permissions();
+            permissions.set_mode(0o644);
+            std::fs::set_permissions(&file_path, permissions).expect("Failed to set permissions");
+        }
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        assert_eq!(file.name, "permissions_test.txt");
+        // Hash should be based on content, not permissions
+        let expected_hash = blake3::hash("permissions content".as_bytes());
+        assert_eq!(file.hash, expected_hash);
+    }
+
+    #[test]
+    fn test_committed_file_symlink_handling() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let target_file = bucket_path.join("target_file.txt");
+        std::fs::write(&target_file, "target content").expect("Failed to write target file");
+
+        let symlink_path = bucket_path.join("symlink_file.txt");
+
+        // Create symlink (Unix-like systems)
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&target_file, &symlink_path)
+                .expect("Failed to create symlink");
+
+            let commit = create_test_commit_command("test message");
+            let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+            assert!(result.is_ok());
+            let commit_data = result.unwrap();
+            // Should include both target file and symlink
+            assert_eq!(commit_data.files.len(), 2);
+
+            let file_names: Vec<String> =
+                commit_data.files.iter().map(|f| f.name.clone()).collect();
+            assert!(file_names.contains(&"target_file.txt".to_string()));
+            assert!(file_names.contains(&"symlink_file.txt".to_string()));
+        }
+
+        // On Windows, just test that the target file is processed
+        #[cfg(windows)]
+        {
+            let commit = create_test_commit_command("test message");
+            let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+            assert!(result.is_ok());
+            let commit_data = result.unwrap();
+            assert_eq!(commit_data.files.len(), 1);
+            assert_eq!(commit_data.files[0].name, "target_file.txt");
+        }
+    }
+
+    #[test]
+    fn test_committed_file_empty_file() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let empty_file_path = bucket_path.join("empty_file.txt");
+        std::fs::write(&empty_file_path, "").expect("Failed to write empty file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        assert_eq!(file.name, "empty_file.txt");
+
+        // Hash of empty content
+        let expected_hash = blake3::hash(b"");
+        assert_eq!(file.hash, expected_hash);
+    }
+
+    #[test]
+    fn test_multiple_files_sorting() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        // Create files in different orders
+        let files = vec!["z_file.txt", "a_file.txt", "m_file.txt"];
+        for file_name in &files {
+            let file_path = bucket_path.join(file_name);
+            std::fs::write(&file_path, format!("content of {}", file_name))
+                .expect("Failed to write file");
+        }
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 3);
+
+        // Check that all files are present (order may vary depending on implementation)
+        let file_names: Vec<String> = commit_data.files.iter().map(|f| f.name.clone()).collect();
+        assert!(file_names.contains(&"z_file.txt".to_string()));
+        assert!(file_names.contains(&"a_file.txt".to_string()));
+        assert!(file_names.contains(&"m_file.txt".to_string()));
+    }
+
+    #[test]
+    fn test_committed_file_uuid_generation() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("uuid_test.txt");
+        std::fs::write(&file_path, "uuid content").expect("Failed to write file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+        assert_eq!(commit_data.files.len(), 1);
+
+        let file = &commit_data.files[0];
+        // UUID should be valid and not nil
+        assert_ne!(file.id, Uuid::nil());
+        assert_eq!(file.id.get_version(), Some(uuid::Version::Random));
+    }
+
+    #[test]
+    fn test_commit_timestamp_generation() {
+        let (_temp_dir, bucket_path) =
+            create_test_bucket_structure().expect("Failed to create test bucket structure");
+
+        let file_path = bucket_path.join("timestamp_test.txt");
+        std::fs::write(&file_path, "timestamp content").expect("Failed to write file");
+
+        let commit = create_test_commit_command("test message");
+        let result = commit.list_files_with_metadata_in_bucket(bucket_path);
+
+        assert!(result.is_ok());
+        let commit_data = result.unwrap();
+
+        // Timestamp should be in ISO 8601 format
+        assert!(!commit_data.timestamp.is_empty());
+
+        // Try to parse timestamp to ensure it's valid
+        let parsed_timestamp = chrono::DateTime::parse_from_rfc3339(&commit_data.timestamp);
+        assert!(parsed_timestamp.is_ok());
+    }
+
+    #[test]
+    fn test_load_last_commit_no_commit() {
+        // This test would require a database setup, so we'll just test the function signature
+        // In a real scenario, you would set up a test database
+        let result = Commit::load_last_commit("nonexistent_bucket".to_string());
+
+        // Since there's no database setup, this will likely fail
+        // In a proper test environment, you would set up a test database
+        // and verify that it returns None for a new bucket
+        assert!(result.is_err() || result.unwrap().is_none());
     }
 }

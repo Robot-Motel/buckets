@@ -30,7 +30,8 @@ fn is_not_in_dir(entry: &DirEntry, root_dir: &Path, excluded_dir: &str) -> bool 
     let root_exclude = root_dir.join(excluded_dir);
 
     let is_inside_top_level_ex_dir = entry.path().starts_with(&root_exclude);
-    entry.file_type().is_file() && !is_top_level_ex_dir && !is_inside_top_level_ex_dir
+    let is_file_or_symlink = entry.file_type().is_file() || entry.file_type().is_symlink();
+    is_file_or_symlink && !is_top_level_ex_dir && !is_inside_top_level_ex_dir
 }
 
 fn make_relative_path(path: &Path, base: &Path) -> Option<PathBuf> {
@@ -520,7 +521,11 @@ mod tests {
             .map(|f| f.to_string_lossy().to_string())
             .collect();
         assert!(file_names.contains(&"normal.txt".to_string()));
-        assert!(file_names.iter().any(|name| name.contains(&format!("subdir2{}{}", std::path::MAIN_SEPARATOR, "file2.txt"))));
+        assert!(file_names.iter().any(|name| name.contains(&format!(
+            "subdir2{}{}",
+            std::path::MAIN_SEPARATOR,
+            "file2.txt"
+        ))));
         assert!(!file_names.iter().any(|name| name.contains(".b")));
 
         Ok(())
@@ -654,7 +659,6 @@ mod tests {
 
         Ok(())
     }
-
 }
 
 /// Get the database path without opening a connection

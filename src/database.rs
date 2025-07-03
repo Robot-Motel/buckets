@@ -18,7 +18,10 @@ impl DatabaseType {
         match s.to_lowercase().as_str() {
             "duckdb" => Ok(DatabaseType::DuckDB),
             "postgresql" | "postgres" => Ok(DatabaseType::PostgreSQL),
-            _ => Err(BucketError::InvalidData(format!("Unsupported database type: {}", s))),
+            _ => Err(BucketError::InvalidData(format!(
+                "Unsupported database type: {}",
+                s
+            ))),
         }
     }
 
@@ -34,7 +37,7 @@ pub fn get_database_type() -> Result<DatabaseType, BucketError> {
     let current_dir = env::current_dir()?;
     let buckets_dir = crate::utils::utils::find_directory_in_parents(&current_dir, ".buckets")
         .ok_or(BucketError::NotInRepo)?;
-    
+
     let db_type_file = buckets_dir.join("database_type");
     if db_type_file.exists() {
         let content = fs::read_to_string(db_type_file)?;
@@ -49,7 +52,7 @@ pub fn get_database_path() -> Result<std::path::PathBuf, BucketError> {
     let current_dir = env::current_dir()?;
     let buckets_dir = crate::utils::utils::find_directory_in_parents(&current_dir, ".buckets")
         .ok_or(BucketError::NotInRepo)?;
-    
+
     let db_type = get_database_type()?;
     match db_type {
         DatabaseType::DuckDB => Ok(buckets_dir.join("buckets.db")),
@@ -62,53 +65,65 @@ pub fn create_duckdb_connection(path: &Path) -> Result<duckdb::Connection, Bucke
 }
 
 #[cfg(feature = "postgres")]
-pub fn create_postgres_connection_and_execute_schema(data_dir: &Path, schema: &str) -> Result<(), BucketError> {
+pub fn create_postgres_connection_and_execute_schema(
+    data_dir: &Path,
+    schema: &str,
+) -> Result<(), BucketError> {
     use postgresql_embedded::{PostgreSQL, Settings};
-    
+
     let settings = Settings {
         data_dir: data_dir.to_path_buf(),
         ..Default::default()
     };
-    
+
     let mut server = PostgreSQL::new(settings);
-    
+
     // Use a simple runtime for async operations
     let rt = tokio::runtime::Runtime::new()
         .map_err(|e| BucketError::DatabaseError(format!("Failed to create runtime: {}", e)))?;
-    
+
     rt.block_on(async {
-        server.setup().await
-            .map_err(|e| BucketError::DatabaseError(format!("Failed to setup PostgreSQL: {}", e)))?;
-        
-        server.start().await
-            .map_err(|e| BucketError::DatabaseError(format!("Failed to start PostgreSQL: {}", e)))?;
-        
+        server.setup().await.map_err(|e| {
+            BucketError::DatabaseError(format!("Failed to setup PostgreSQL: {}", e))
+        })?;
+
+        server.start().await.map_err(|e| {
+            BucketError::DatabaseError(format!("Failed to start PostgreSQL: {}", e))
+        })?;
+
         // Wait a bit for the server to be ready
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-        
+
         Ok::<(), BucketError>(())
     })?;
-    
+
     let url = server.settings().url("postgres");
-    
+
     // Connect and execute schema while server is alive
-    let mut client = postgres::Client::connect(&url, postgres::NoTls)
-        .map_err(|e| BucketError::DatabaseError(format!("Failed to connect to PostgreSQL: {}", e)))?;
-    
-    client.batch_execute(schema)
+    let mut client = postgres::Client::connect(&url, postgres::NoTls).map_err(|e| {
+        BucketError::DatabaseError(format!("Failed to connect to PostgreSQL: {}", e))
+    })?;
+
+    client
+        .batch_execute(schema)
         .map_err(|e| BucketError::DatabaseError(format!("Failed to execute schema: {}", e)))?;
-    
+
     Ok(())
 }
 
 #[cfg(not(feature = "postgres"))]
-pub fn create_postgres_connection_and_execute_schema(_data_dir: &Path, _schema: &str) -> Result<(), BucketError> {
-    Err(BucketError::DatabaseError("PostgreSQL support not compiled in".to_string()))
+pub fn create_postgres_connection_and_execute_schema(
+    _data_dir: &Path,
+    _schema: &str,
+) -> Result<(), BucketError> {
+    Err(BucketError::DatabaseError(
+        "PostgreSQL support not compiled in".to_string(),
+    ))
 }
 
 pub fn initialize_database(location: &Path, db_type: DatabaseType) -> Result<(), BucketError> {
     let schema = include_str!("sql/schema.sql");
-    
+
     match db_type {
         DatabaseType::DuckDB => {
             let db_path = location.join("buckets.db");
@@ -124,14 +139,17 @@ pub fn initialize_database(location: &Path, db_type: DatabaseType) -> Result<(),
             }
             #[cfg(not(feature = "postgres"))]
             {
-                return Err(BucketError::DatabaseError("PostgreSQL support not compiled in. Build with --features postgres to enable.".to_string()));
+                return Err(BucketError::DatabaseError(
+                    "PostgreSQL support not compiled in. Build with --features postgres to enable."
+                        .to_string(),
+                ));
             }
         }
     }
-    
+
     // Write database type to config
     let config_path = location.join("database_type");
     fs::write(config_path, db_type.as_str())?;
-    
+
     Ok(())
 }

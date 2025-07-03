@@ -56,7 +56,10 @@ pub struct InitCommand {
 fn validate_database_type(s: &str) -> Result<String, String> {
     match s.to_lowercase().as_str() {
         "duckdb" | "postgresql" | "postgres" => Ok(s.to_string()),
-        _ => Err(format!("Invalid database type '{}'. Valid options are: duckdb, postgresql", s)),
+        _ => Err(format!(
+            "Invalid database type '{}'. Valid options are: duckdb, postgresql",
+            s
+        )),
     }
 }
 

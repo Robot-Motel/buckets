@@ -1,7 +1,7 @@
 use crate::args::InitCommand;
 use crate::commands::BucketCommand;
 use crate::config::Config;
-use crate::database::{DatabaseType, initialize_database};
+use crate::database::{initialize_database, DatabaseType};
 use crate::errors::BucketError;
 use crate::utils::checks;
 use crate::CURRENT_DIR;
@@ -44,7 +44,7 @@ impl Init {
 
         fs::create_dir_all(&repo_buckets_path)?;
         self.create_config_file(&repo_buckets_path)?;
-        
+
         let db_type = DatabaseType::from_str(&self.args.database)?;
         initialize_database(&repo_buckets_path, db_type)?;
 
@@ -77,7 +77,6 @@ impl Init {
 
         Ok(())
     }
-
 
     fn checks(&self, repo_name: &str) -> Result<(), BucketError> {
         let repo_path = CURRENT_DIR.with(|dir| dir.join(repo_name));
@@ -134,18 +133,18 @@ mod tests {
     fn test_create_config_file() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let config_dir = temp_dir.path().join("test_config");
-        
+
         let init = create_test_init_command("test_repo", "duckdb");
         let result = init.create_config_file(&config_dir);
-        
+
         assert!(result.is_ok());
         assert!(config_dir.exists());
         assert!(config_dir.is_dir());
-        
+
         let config_file = config_dir.join("config");
         assert!(config_file.exists());
         assert!(config_file.is_file());
-        
+
         // Verify the config file content
         let content = fs::read_to_string(&config_file).expect("Failed to read config file");
         assert!(content.contains("ntp_server = \"pool.ntp.org\""));
@@ -157,15 +156,15 @@ mod tests {
     fn test_create_config_file_existing_directory() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let config_dir = temp_dir.path().join("existing_config");
-        
+
         // Pre-create the directory
         fs::create_dir_all(&config_dir).expect("Failed to create directory");
-        
+
         let init = create_test_init_command("test_repo", "duckdb");
         let result = init.create_config_file(&config_dir);
-        
+
         assert!(result.is_ok());
-        
+
         let config_file = config_dir.join("config");
         assert!(config_file.exists());
         assert!(config_file.is_file());
@@ -174,11 +173,11 @@ mod tests {
     #[test]
     fn test_create_config_file_invalid_path() {
         let init = create_test_init_command("test_repo", "duckdb");
-        
+
         // Try to create config in a path that cannot be created (invalid parent)
         let invalid_path = std::path::Path::new("/invalid/path/that/does/not/exist");
         let result = init.create_config_file(invalid_path);
-        
+
         assert!(result.is_err());
     }
 
@@ -186,7 +185,7 @@ mod tests {
     fn test_checks_valid_repo_name() {
         let init = create_test_init_command("valid_repo", "duckdb");
         let result = init.checks("valid_repo");
-        
+
         // Should be ok because the repo doesn't exist yet
         assert!(result.is_ok());
     }
@@ -196,16 +195,16 @@ mod tests {
         let current_dir = std::env::current_dir().expect("Failed to get current directory");
         let test_repo_name = "temp_test_existing_repo";
         let existing_dir = current_dir.join(test_repo_name);
-        
+
         // Create a directory that already exists but is not a bucket repo
         fs::create_dir_all(&existing_dir).expect("Failed to create directory");
-        
+
         let init = create_test_init_command(test_repo_name, "duckdb");
         let result = init.checks(test_repo_name);
-        
+
         // Clean up the test directory
         fs::remove_dir_all(&existing_dir).expect("Failed to remove test directory");
-        
+
         assert!(result.is_err());
         match result.unwrap_err() {
             BucketError::IoError(err) => {
@@ -221,16 +220,16 @@ mod tests {
         let current_dir = std::env::current_dir().expect("Failed to get current directory");
         let test_file_name = "temp_test_existing_file_repo";
         let existing_file = current_dir.join(test_file_name);
-        
+
         // Create a file with the same name as the repo
         fs::write(&existing_file, "test content").expect("Failed to create file");
-        
+
         let init = create_test_init_command(test_file_name, "duckdb");
         let result = init.checks(test_file_name);
-        
+
         // Clean up the test file
         fs::remove_file(&existing_file).expect("Failed to remove test file");
-        
+
         assert!(result.is_err());
         match result.unwrap_err() {
             BucketError::IoError(err) => {
@@ -247,26 +246,27 @@ mod tests {
         let test_repo_name = "temp_test_existing_bucket_repo";
         let existing_repo = current_dir.join(test_repo_name);
         let buckets_dir = existing_repo.join(".buckets");
-        
+
         // Create a directory that looks like a bucket repo
         fs::create_dir_all(&buckets_dir).expect("Failed to create .buckets directory");
-        
+
         // Create config file to make it look like a valid repo
         let config_file = buckets_dir.join("config");
         fs::write(&config_file, "ntp_server = \"pool.ntp.org\"").expect("Failed to create config");
-        
+
         // Create a database file to make it look like a valid repo
         let db_file = buckets_dir.join("buckets.db");
         let conn = duckdb::Connection::open(&db_file).expect("Failed to create database");
-        conn.execute("CREATE TABLE test (id INTEGER);", []).expect("Failed to create table");
+        conn.execute("CREATE TABLE test (id INTEGER);", [])
+            .expect("Failed to create table");
         conn.close().expect("Failed to close connection");
-        
+
         let init = create_test_init_command(test_repo_name, "duckdb");
         let result = init.checks(test_repo_name);
-        
+
         // Clean up the test directory
         fs::remove_dir_all(&existing_repo).expect("Failed to remove test directory");
-        
+
         assert!(result.is_err());
         match result.unwrap_err() {
             BucketError::RepoAlreadyExists(repo_name) => {
@@ -279,59 +279,61 @@ mod tests {
     #[test]
     fn test_create_repo_with_duckdb() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
-        
+
         let init = create_test_init_command("test_repo", "duckdb");
         let result = init.create_repo("test_repo", temp_dir.path());
-        
+
         assert!(result.is_ok());
-        
+
         let repo_path = temp_dir.path().join("test_repo");
         assert!(repo_path.exists());
         assert!(repo_path.is_dir());
-        
+
         let buckets_path = repo_path.join(".buckets");
         assert!(buckets_path.exists());
         assert!(buckets_path.is_dir());
-        
+
         let config_file = buckets_path.join("config");
         assert!(config_file.exists());
         assert!(config_file.is_file());
-        
+
         let db_file = buckets_path.join("buckets.db");
         assert!(db_file.exists());
         assert!(db_file.is_file());
-        
+
         let db_type_file = buckets_path.join("database_type");
         assert!(db_type_file.exists());
         assert!(db_type_file.is_file());
-        
-        let db_type_content = fs::read_to_string(db_type_file).expect("Failed to read database_type file");
+
+        let db_type_content =
+            fs::read_to_string(db_type_file).expect("Failed to read database_type file");
         assert_eq!(db_type_content.trim(), "duckdb");
     }
 
     #[test]
     fn test_create_repo_with_postgresql() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
-        
+
         let init = create_test_init_command("test_repo", "postgresql");
         let result = init.create_repo("test_repo", temp_dir.path());
-        
+
         // The result depends on whether PostgreSQL feature is enabled
         // For now, we'll just check that it doesn't panic and handles the database type correctly
         let repo_path = temp_dir.path().join("test_repo");
         let buckets_path = repo_path.join(".buckets");
-        
+
         if result.is_ok() {
             // If PostgreSQL is enabled, check the structure
             assert!(repo_path.exists());
             assert!(buckets_path.exists());
-            
+
             let config_file = buckets_path.join("config");
             assert!(config_file.exists());
-            
+
             let db_type_file = buckets_path.join("database_type");
             if db_type_file.exists() {
-                let db_type_content = fs::read_to_string(db_type_file).expect("Failed to read database_type file");
+                let db_type_content =
+                    fs::read_to_string(db_type_file).expect("Failed to read database_type file");
                 assert_eq!(db_type_content.trim(), "postgresql");
             }
         } else {
@@ -348,10 +350,10 @@ mod tests {
     #[test]
     fn test_create_repo_invalid_database_type() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
-        
+
         let init = create_test_init_command("test_repo", "invalid_db");
         let result = init.create_repo("test_repo", temp_dir.path());
-        
+
         assert!(result.is_err());
         match result.unwrap_err() {
             BucketError::InvalidData(msg) => {
@@ -369,15 +371,17 @@ mod tests {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let readonly_dir = temp_dir.path().join("readonly");
         fs::create_dir_all(&readonly_dir).expect("Failed to create readonly directory");
-        
+
         // Make the directory read-only (this might not work on all systems)
-        let mut permissions = fs::metadata(&readonly_dir).expect("Failed to get metadata").permissions();
+        let mut permissions = fs::metadata(&readonly_dir)
+            .expect("Failed to get metadata")
+            .permissions();
         permissions.set_readonly(true);
         fs::set_permissions(&readonly_dir, permissions).expect("Failed to set readonly");
-        
+
         let init = create_test_init_command("test_repo", "duckdb");
         let result = init.create_repo("test_repo", &readonly_dir);
-        
+
         // The result depends on the system's permission handling
         // On some systems, this might still succeed, so we'll just check it doesn't panic
         let _ = result; // Don't assert specific behavior as it's system-dependent
@@ -389,12 +393,12 @@ mod tests {
         assert!(DatabaseType::from_str("duckdb").is_ok());
         assert!(DatabaseType::from_str("postgresql").is_ok());
         assert!(DatabaseType::from_str("postgres").is_ok());
-        
+
         // Test case insensitivity
         assert!(DatabaseType::from_str("DUCKDB").is_ok());
         assert!(DatabaseType::from_str("PostgreSQL").is_ok());
         assert!(DatabaseType::from_str("POSTGRES").is_ok());
-        
+
         // Test invalid database types
         assert!(DatabaseType::from_str("mysql").is_err());
         assert!(DatabaseType::from_str("sqlite").is_err());
@@ -406,23 +410,23 @@ mod tests {
     fn test_config_file_content_format() {
         let temp_dir = tempdir().expect("Failed to create temporary directory");
         let config_dir = temp_dir.path().join("test_config");
-        
+
         let init = create_test_init_command("test_repo", "duckdb");
         let result = init.create_config_file(&config_dir);
-        
+
         assert!(result.is_ok());
-        
+
         let config_file = config_dir.join("config");
         let content = fs::read_to_string(&config_file).expect("Failed to read config file");
-        
+
         // Verify it's valid TOML format by parsing it
         let parsed: toml::Value = toml::from_str(&content).expect("Config file is not valid TOML");
-        
+
         // Verify the structure
         assert!(parsed.get("ntp_server").is_some());
         assert!(parsed.get("ip_check").is_some());
         assert!(parsed.get("url_check").is_some());
-        
+
         // Verify the values
         assert_eq!(parsed["ntp_server"].as_str(), Some("pool.ntp.org"));
         assert_eq!(parsed["ip_check"].as_str(), Some("8.8.8.8"));
