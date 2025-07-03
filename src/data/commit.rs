@@ -200,6 +200,11 @@ impl CommittedFile {
             .join(&self.previous_hash.to_string());
         let output_path = bucket_path.join(&self.name);
 
+        // Create parent directories if they don't exist
+        if let Some(parent) = output_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
         restore_file(&input_path, &output_path)
     }
 }

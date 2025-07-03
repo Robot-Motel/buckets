@@ -1,6 +1,5 @@
 use crate::args::CommitCommand;
 use crate::commands::BucketCommand;
-use crate::data::bucket::BucketTrait;
 use crate::data::commit::{Commit as CommitData, CommitStatus, CommittedFile};
 use crate::errors::BucketError;
 use crate::utils::utils::{
@@ -48,7 +47,7 @@ impl BucketCommand for Commit {
         // create a list of each file in the bucket directory, recursively
         // and create a blake3 hash for each file and add to current_commit
         let current_commit =
-            self.list_files_with_metadata_in_bucket(bucket.get_full_bucket_path()?)?;
+            self.list_files_with_metadata_in_bucket(world.work_dir.clone())?;
         if current_commit.files.is_empty() {
             return Err(
                 Error::new(ErrorKind::NotFound, "No commitable files found in bucket.").into(),
@@ -64,7 +63,7 @@ impl BucketCommand for Commit {
                 println!("No previous commit found. Processing all files. ########################################################## ");
                 self.process_files(
                     bucket.id,
-                    &bucket.relative_bucket_path,
+                    &world.work_dir,
                     &current_commit.files,
                     &self.args.message,
                 )?;
@@ -77,7 +76,7 @@ impl BucketCommand for Commit {
                     println!("Processing files that have changed. ########################################################## ");
                     self.process_files(
                         bucket.id,
-                        &bucket.get_full_bucket_path()?,
+                        &world.work_dir,
                         &changes,
                         &self.args.message,
                     )?;
@@ -291,13 +290,17 @@ impl Commit {
             )));
         }
 
-        Ok(Some(CommitData {
-            bucket: bucket_name,
-            files,
-            timestamp: "".to_string(),
-            previous: None,
-            next: None,
-        }))
+        if files.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(CommitData {
+                bucket: bucket_name,
+                files,
+                timestamp: "".to_string(),
+                previous: None,
+                next: None,
+            }))
+        }
     }
 }
 

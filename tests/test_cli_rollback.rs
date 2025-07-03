@@ -23,10 +23,14 @@ mod tests {
         let bucket_dir = repo_dir.join("test_bucket");
 
         let file_path = bucket_dir.join("test_file.txt");
-        let mut file_1 = File::create(&file_path).expect("Failed to create file");
-        file_1
-            .write_all(b"test file 1")
-            .expect("Failed to write to file");
+        
+        // Create and write initial content
+        {
+            let mut file_1 = File::create(&file_path).expect("Failed to create file");
+            file_1
+                .write_all(b"test file 1")
+                .expect("Failed to write to file");
+        }
 
         let mut cmd1 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd1.current_dir(bucket_dir.as_path())
@@ -35,9 +39,13 @@ mod tests {
             .assert()
             .success();
 
-        file_1
-            .write_all(b"change file 1")
-            .expect("Failed to write to file");
+        // Modify the file after the commit
+        {
+            let mut file_1 = File::create(&file_path).expect("Failed to create file for modification");
+            file_1
+                .write_all(b"change file 1")
+                .expect("Failed to write to file");
+        }
 
         let mut cmd2 = assert_cmd::Command::cargo_bin("buckets").expect("failed to run command");
         cmd2.current_dir(bucket_dir.as_path())

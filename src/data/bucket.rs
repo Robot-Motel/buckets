@@ -122,7 +122,7 @@ impl BucketTrait for Bucket {
                                 "0000000000000000000000000000000000000000000000000000000000000000",
                             )
                             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?,
-                            status: CommitStatus::Unknown,
+                            status: CommitStatus::New,
                         });
                     }
                     Err(e) => {

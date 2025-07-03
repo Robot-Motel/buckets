@@ -241,6 +241,7 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn test_checks_existing_bucket_repo() {
         let current_dir = std::env::current_dir().expect("Failed to get current directory");
         let test_repo_name = "temp_test_existing_bucket_repo";

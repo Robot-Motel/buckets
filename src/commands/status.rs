@@ -68,7 +68,7 @@ impl Status {
         match Commit::load_last_commit(bucket.name) {
             Ok(None) => {
                 bucket_files.files.iter().for_each(|file| {
-                    println!("new file:    {}", file.name);
+                    println!("{}:    {}", file.status, file.name);
                 });
             }
             Ok(Some(previous_commit)) => {
