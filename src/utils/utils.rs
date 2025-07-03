@@ -662,6 +662,7 @@ mod tests {
 }
 
 /// Get the database path without opening a connection
+#[allow(dead_code)]
 pub fn get_db_path() -> Result<std::path::PathBuf, BucketError> {
     let current_dir = env::current_dir()?;
 
@@ -672,6 +673,7 @@ pub fn get_db_path() -> Result<std::path::PathBuf, BucketError> {
 }
 
 /// Create a database connection from a path (useful for reusing path lookups)
+#[allow(dead_code)]
 pub fn connect_to_db_with_path(db_path: &std::path::Path) -> Result<Connection, BucketError> {
     Connection::open(db_path).map_err(BucketError::DuckDB)
 }

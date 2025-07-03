@@ -33,6 +33,7 @@ impl DatabaseType {
     }
 }
 
+#[allow(dead_code)]
 pub fn get_database_type() -> Result<DatabaseType, BucketError> {
     let current_dir = env::current_dir()?;
     let buckets_dir = crate::utils::utils::find_directory_in_parents(&current_dir, ".buckets")
@@ -48,6 +49,7 @@ pub fn get_database_type() -> Result<DatabaseType, BucketError> {
     }
 }
 
+#[allow(dead_code)]
 pub fn get_database_path() -> Result<std::path::PathBuf, BucketError> {
     let current_dir = env::current_dir()?;
     let buckets_dir = crate::utils::utils::find_directory_in_parents(&current_dir, ".buckets")
@@ -112,6 +114,7 @@ pub fn create_postgres_connection_and_execute_schema(
 }
 
 #[cfg(not(feature = "postgres"))]
+#[allow(dead_code)]
 pub fn create_postgres_connection_and_execute_schema(
     _data_dir: &Path,
     _schema: &str,
