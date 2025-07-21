@@ -71,7 +71,8 @@ impl BucketCommand for Commit {
             Ok(Some(previous_commit)) => {
                 // Compare the current commit with the previous commit
                 println!("Previous commit found. Comparing with current commit. ########################################################## ");
-                if let Some(changes) = current_commit.compare(&previous_commit) {
+                let changes = current_commit.compare(&previous_commit);
+                if !changes.is_empty() {
                     // Process the files that have changed
                     println!("Processing files that have changed. ########################################################## ");
                     self.process_files(

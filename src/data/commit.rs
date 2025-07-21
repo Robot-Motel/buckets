@@ -87,7 +87,7 @@ impl PartialEq for CommitStatus {
 
 impl Commit {
     #[allow(dead_code)]
-    pub fn compare(&self, other_commit: &Commit) -> Option<Vec<CommittedFile>> {
+    pub fn compare(&self, other_commit: &Commit) -> Vec<CommittedFile> {
         let Commit {
             bucket: _,
             files: _,
@@ -166,7 +166,7 @@ impl Commit {
                     }
                 }
             }
-            Some(status_all_files)
+            status_all_files
         }
     }
 }
@@ -278,8 +278,6 @@ mod tests {
         };
 
         let changes = commit1.compare(&commit2);
-        assert!(changes.is_some());
-        let changes = changes.unwrap();
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].status, CommitStatus::Committed);
     }
@@ -319,8 +317,6 @@ mod tests {
         };
 
         let changes = commit1.compare(&commit2);
-        assert!(changes.is_some());
-        let changes = changes.unwrap();
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].status, CommitStatus::Modified);
     }
@@ -352,8 +348,6 @@ mod tests {
         };
 
         let changes = commit1.compare(&commit2);
-        assert!(changes.is_some());
-        let changes = changes.unwrap();
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].status, CommitStatus::New);
     }
@@ -385,8 +379,6 @@ mod tests {
         };
 
         let changes = commit1.compare(&commit2);
-        assert!(changes.is_some());
-        let changes = changes.unwrap();
         assert_eq!(changes.len(), 1);
         assert_eq!(changes[0].status, CommitStatus::Deleted);
     }
