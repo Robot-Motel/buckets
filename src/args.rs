@@ -51,6 +51,9 @@ pub struct InitCommand {
 
     #[clap(long, default_value = "duckdb", value_parser = validate_database_type)]
     pub database: String,
+
+    #[clap(long)]
+    pub external_database: Option<String>,
 }
 
 fn validate_database_type(s: &str) -> Result<String, String> {

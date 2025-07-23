@@ -9,12 +9,14 @@ use postgresql_embedded;
 
 #[derive(Debug, Clone, Copy)]
 pub enum DatabaseType {
+    DuckDB,
     PostgreSQL,
 }
 
 impl DatabaseType {
     pub fn from_str(s: &str) -> Result<Self, BucketError> {
         match s.to_lowercase().as_str() {
+            "duckdb" => Ok(DatabaseType::DuckDB),
             "postgresql" | "postgres" => Ok(DatabaseType::PostgreSQL),
             _ => Err(BucketError::InvalidData(format!(
                 "Unsupported database type: {}",
@@ -25,6 +27,7 @@ impl DatabaseType {
 
     pub fn as_str(&self) -> &'static str {
         match self {
+            DatabaseType::DuckDB => "duckdb",
             DatabaseType::PostgreSQL => "postgresql",
         }
     }
@@ -54,6 +57,7 @@ pub fn get_database_path() -> Result<std::path::PathBuf, BucketError> {
 
     let db_type = get_database_type()?;
     match db_type {
+        DatabaseType::DuckDB => Ok(buckets_dir.join("buckets.db")),
         DatabaseType::PostgreSQL => Ok(buckets_dir.join("postgres_data")),
     }
 }
@@ -120,6 +124,11 @@ pub fn initialize_database(location: &Path, db_type: DatabaseType) -> Result<(),
     let schema = include_str!("sql/schema.sql");
 
     match db_type {
+        DatabaseType::DuckDB => {
+            let db_path = location.join("buckets.db");
+            let connection = duckdb::Connection::open(&db_path).map_err(BucketError::DuckDB)?;
+            connection.execute_batch(schema).map_err(BucketError::DuckDB)?;
+        }
         DatabaseType::PostgreSQL => {
             #[cfg(feature = "postgres")]
             {
