@@ -9,14 +9,12 @@ use postgresql_embedded;
 
 #[derive(Debug, Clone, Copy)]
 pub enum DatabaseType {
-    DuckDB,
     PostgreSQL,
 }
 
 impl DatabaseType {
     pub fn from_str(s: &str) -> Result<Self, BucketError> {
         match s.to_lowercase().as_str() {
-            "duckdb" => Ok(DatabaseType::DuckDB),
             "postgresql" | "postgres" => Ok(DatabaseType::PostgreSQL),
             _ => Err(BucketError::InvalidData(format!(
                 "Unsupported database type: {}",
@@ -27,7 +25,6 @@ impl DatabaseType {
 
     pub fn as_str(&self) -> &'static str {
         match self {
-            DatabaseType::DuckDB => "duckdb",
             DatabaseType::PostgreSQL => "postgresql",
         }
     }
@@ -44,8 +41,8 @@ pub fn get_database_type() -> Result<DatabaseType, BucketError> {
         let content = fs::read_to_string(db_type_file)?;
         DatabaseType::from_str(content.trim())
     } else {
-        // Default to DuckDB for backward compatibility
-        Ok(DatabaseType::DuckDB)
+        // Default to PostgreSQL
+        Ok(DatabaseType::PostgreSQL)
     }
 }
 
@@ -57,13 +54,8 @@ pub fn get_database_path() -> Result<std::path::PathBuf, BucketError> {
 
     let db_type = get_database_type()?;
     match db_type {
-        DatabaseType::DuckDB => Ok(buckets_dir.join("buckets.db")),
         DatabaseType::PostgreSQL => Ok(buckets_dir.join("postgres_data")),
     }
-}
-
-pub fn create_duckdb_connection(path: &Path) -> Result<duckdb::Connection, BucketError> {
-    duckdb::Connection::open(path).map_err(BucketError::DuckDB)
 }
 
 #[cfg(feature = "postgres")]
@@ -128,11 +120,6 @@ pub fn initialize_database(location: &Path, db_type: DatabaseType) -> Result<(),
     let schema = include_str!("sql/schema.sql");
 
     match db_type {
-        DatabaseType::DuckDB => {
-            let db_path = location.join("buckets.db");
-            let connection = create_duckdb_connection(&db_path)?;
-            connection.execute_batch(schema)?;
-        }
         DatabaseType::PostgreSQL => {
             #[cfg(feature = "postgres")]
             {

@@ -4,7 +4,6 @@
 
 ### Prerequisites
 - Rust toolchain installed
-- DuckDB CLI (for database verification)
 - PostgreSQL client tools (for PostgreSQL tests)
 
 ### Installation Methods
@@ -29,69 +28,20 @@ cd buckets
 cargo install --path .
 Get-Command buckets.exe
 Set-Alias buckets "C:\Users\WindowsUser\.cargo\bin\buckets.exe"
-winget install DuckDB.cli
 buckets --version
 ```
 
 ## Test Suite
 
-### TC001: Repository Initialization - Default (DuckDB)
+### TC001: Repository Initialization - Default (Embedded PostgreSQL)
 
-**Objective:** Verify repository initialization with default DuckDB backend
+**Objective:** Verify repository initialization with default embedded PostgreSQL backend
 
 **Preconditions:** Clean test environment
 
 **Test Steps:**
 ```bash
-buckets init test_repo_duckdb
-```
-
-**Expected Results:**
-- Exit code: 0
-- Console output: "Bucket repository initialized successfully."
-- Directory structure:
-  ```
-  ./test_repo_duckdb/
-  ./test_repo_duckdb/.buckets/
-  ./test_repo_duckdb/.buckets/buckets.db
-  ./test_repo_duckdb/.buckets/config
-  ./test_repo_duckdb/.buckets/database_type
-  ```
-- Database type file contains: `duckdb`
-- `buckets.db` is a valid DuckDB database with correct schema
-
-**Database Schema Verification:**
-```bash
-duckdb ./test_repo_duckdb/.buckets/buckets.db
-D show tables;
-```
-Expected output:
-```
-┌─────────┐
-│  name   │
-│ varchar │
-├─────────┤
-│ buckets │
-│ commits │
-│ files   │
-└─────────┘
-```
-
-**Post-conditions:** Repository ready for bucket creation
-
----
-
-### TC002: Repository Initialization - PostgreSQL Backend
-
-**Objective:** Verify repository initialization with PostgreSQL backend
-
-**Preconditions:** 
-- Clean test environment
-- Build with postgres feature: `cargo build --features postgres`
-
-**Test Steps:**
-```bash
-./target/debug/buckets init test_repo_postgres --database postgresql
+buckets init test_repo_postgres
 ```
 
 **Expected Results:**
@@ -112,6 +62,34 @@ Expected output:
 
 ---
 
+### TC002: Repository Initialization - External Database
+
+**Objective:** Verify repository initialization with an external database
+
+**Preconditions:** 
+- Clean test environment
+
+**Test Steps:**
+```bash
+buckets init test_repo_external --external-database "postgres://user:password@localhost/db"
+```
+
+**Expected Results:**
+- Exit code: 0
+- Console output: "Bucket repository initialized successfully."
+- Directory structure:
+  ```
+  ./test_repo_external/
+  ./test_repo_external/.buckets/
+  ./test_repo_external/.buckets/config
+  ./test_repo_external/.buckets/database_type
+  ```
+- Config file contains the external database connection string
+
+**Post-conditions:** Repository ready for bucket creation
+
+---
+
 ### TC003: Database Option Validation
 
 **Objective:** Verify proper validation of database type parameter
@@ -120,7 +98,6 @@ Expected output:
 
 #### TC003a: Valid Database Types
 ```bash
-buckets init test_valid_duckdb --database duckdb      # Should succeed
 buckets init test_valid_postgres --database postgres  # Should succeed  
 buckets init test_valid_postgresql --database postgresql # Should succeed
 ```
@@ -131,19 +108,11 @@ buckets init test_invalid --database mysql
 ```
 **Expected Results:**
 - Exit code: non-zero
-- Error message: "Invalid database type 'mysql'. Valid options are: duckdb, postgresql"
-
-#### TC003c: PostgreSQL Without Feature Flag
-```bash
-# Build without postgres feature
-cargo build
-./target/debug/buckets init test_no_feature --database postgresql
-```
-**Expected Results:**
-- Exit code: non-zero  
-- Error message: "PostgreSQL support not compiled in. Build with --features postgres to enable."
+- Error message: "Invalid database type 'mysql'. Valid options are: postgresql"
 
 ---
+
+### TC004: Bucket Creation
 
 **Objective:** Verify bucket creation functionality
 
@@ -151,19 +120,13 @@ cargo build
 
 **Test Steps:**
 ```bash
-cd test_repo_duckdb  # or test_repo_postgres
+cd test_repo_postgres  # or test_repo_external
 buckets create test_bucket
 ```
 
 **Expected Results:**
 - Exit code: 0
 - Console output indicating successful bucket creation
-- Database verification (DuckDB example):
-  ```bash
-  duckdb ./.buckets/buckets.db
-  D select * from buckets;
-  ```
-  Expected: Single row with UUID, name="test_bucket", path="test_bucket"
 
 **Post-conditions:** Bucket ready for file operations
 
@@ -190,11 +153,6 @@ buckets commit "Add test file"
 
 **Database Verification:**
 ```bash
-# For DuckDB
-duckdb ../.buckets/buckets.db
-D select * from commits;
-D select * from files;
-
 # For PostgreSQL  
 # Connect using appropriate PostgreSQL client with embedded server URL
 ```
