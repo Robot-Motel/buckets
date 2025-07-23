@@ -45,8 +45,8 @@ impl Init {
         fs::create_dir_all(&repo_buckets_path)?;
         self.create_config_file(&repo_buckets_path)?;
 
-        if let Some(external_db) = &self.args.external_database {
-            self.create_external_config_file(&repo_buckets_path, external_db)?;
+        if self.args.database.starts_with("postgres://") {
+            self.create_external_config_file(&repo_buckets_path, &self.args.database)?;
         } else {
             initialize_database(&repo_buckets_path, DatabaseType::PostgreSQL)?;
         }
@@ -123,7 +123,6 @@ mod tests {
             shared: SharedArguments::default(),
             repo_name: repo_name.to_string(),
             database: database.to_string(),
-            external_database: None,
         };
         Init::new(&args)
     }
@@ -134,7 +133,6 @@ mod tests {
             shared: SharedArguments::default(),
             repo_name: "test_repo".to_string(),
             database: "postgresql".to_string(),
-            external_database: None,
         };
         let init = Init::new(&args);
         assert_eq!(init.args.repo_name, "test_repo");
@@ -319,8 +317,7 @@ mod tests {
         let args = InitCommand {
             shared: SharedArguments::default(),
             repo_name: "test_repo".to_string(),
-            database: "postgresql".to_string(),
-            external_database: Some("postgres://user:password@localhost/db".to_string()),
+            database: "postgres://user:password@localhost/db".to_string(),
         };
         let init = Init::new(&args);
         let result = init.create_repo("test_repo", temp_dir.path());
