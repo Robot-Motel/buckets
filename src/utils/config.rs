@@ -9,6 +9,7 @@ pub(crate) struct RepositoryConfig {
     pub ntp_server: String,
     pub ip_check: String,
     pub url_check: String,
+    pub external_database: Option<String>,
 }
 
 impl RepositoryConfig {
@@ -34,6 +35,7 @@ impl Default for RepositoryConfig {
             ntp_server: "pool.ntp.org".to_string(),
             ip_check: "8.8.8.8".to_string(),
             url_check: "api.ipify.org".to_string(),
+            external_database: None,
         }
     }
 }
@@ -55,7 +57,8 @@ mod tests {
         let init_cmd = crate::commands::init::Init::new(&crate::args::InitCommand {
             shared: crate::args::SharedArguments::default(),
             repo_name: "test".to_string(),
-            database: "duckdb".to_string(),
+            database: "postgresql".to_string(),
+            external_database: Some("postgres://user:password@localhost/db".to_string()),
         });
         init_cmd
             .create_config_file(&buckets_dir.as_path())
@@ -69,6 +72,10 @@ mod tests {
         assert_eq!(config.ip_check, "8.8.8.8");
         assert_eq!(config.ntp_server, "pool.ntp.org");
         assert_eq!(config.url_check, "api.ipify.org");
+        assert_eq!(
+            config.external_database,
+            Some("postgres://user:password@localhost/db".to_string())
+        );
     }
 
     #[test]
@@ -77,6 +84,7 @@ mod tests {
         assert_eq!(config.ntp_server, "pool.ntp.org");
         assert_eq!(config.ip_check, "8.8.8.8");
         assert_eq!(config.url_check, "api.ipify.org");
+        assert_eq!(config.external_database, None);
     }
 
     #[test]
@@ -90,6 +98,7 @@ mod tests {
         assert!(serialized.contains("pool.ntp.org"));
         assert!(serialized.contains("8.8.8.8"));
         assert!(serialized.contains("api.ipify.org"));
+        assert!(!serialized.contains("external_database"));
     }
 
     #[test]
@@ -98,6 +107,7 @@ mod tests {
 ntp_server = "custom.ntp.server"
 ip_check = "1.1.1.1"
 url_check = "custom.check.url"
+external_database = "postgres://user:password@localhost/db"
 "#;
         let config: RepositoryConfig =
             toml::from_str(toml_content).expect("Failed to deserialize config");
@@ -105,6 +115,10 @@ url_check = "custom.check.url"
         assert_eq!(config.ntp_server, "custom.ntp.server");
         assert_eq!(config.ip_check, "1.1.1.1");
         assert_eq!(config.url_check, "custom.check.url");
+        assert_eq!(
+            config.external_database,
+            Some("postgres://user:password@localhost/db".to_string())
+        );
     }
 
     #[test]
@@ -158,7 +172,8 @@ url_check = "custom.check.url"
         let init_cmd = crate::commands::init::Init::new(&crate::args::InitCommand {
             shared: crate::args::SharedArguments::default(),
             repo_name: "test".to_string(),
-            database: "duckdb".to_string(),
+            database: "postgresql".to_string(),
+            external_database: None,
         });
         init_cmd
             .create_config_file(&buckets_dir.as_path())
@@ -172,6 +187,7 @@ url_check = "custom.check.url"
         assert_eq!(config.ip_check, "8.8.8.8");
         assert_eq!(config.ntp_server, "pool.ntp.org");
         assert_eq!(config.url_check, "api.ipify.org");
+        assert_eq!(config.external_database, None);
         Ok(())
     }
 
@@ -184,5 +200,6 @@ url_check = "custom.check.url"
         assert!(debug_str.contains("ntp_server"));
         assert!(debug_str.contains("ip_check"));
         assert!(debug_str.contains("url_check"));
+        assert!(debug_str.contains("external_database"));
     }
 }

@@ -51,15 +51,22 @@ pub struct InitCommand {
 
     #[clap(long, default_value = "duckdb", value_parser = validate_database_type)]
     pub database: String,
+
+    #[clap(long)]
+    pub external_database: Option<String>,
 }
 
 fn validate_database_type(s: &str) -> Result<String, String> {
-    match s.to_lowercase().as_str() {
-        "duckdb" | "postgresql" | "postgres" => Ok(s.to_string()),
-        _ => Err(format!(
-            "Invalid database type '{}'. Valid options are: duckdb, postgresql",
-            s
-        )),
+    if s.starts_with("postgres://") {
+        Ok(s.to_string())
+    } else {
+        match s.to_lowercase().as_str() {
+            "duckdb" | "postgresql" | "postgres" => Ok(s.to_string()),
+            _ => Err(format!(
+                "Invalid database type '{}'. Valid options are: duckdb, postgresql",
+                s
+            )),
+        }
     }
 }
 

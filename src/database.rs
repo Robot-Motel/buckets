@@ -44,8 +44,8 @@ pub fn get_database_type() -> Result<DatabaseType, BucketError> {
         let content = fs::read_to_string(db_type_file)?;
         DatabaseType::from_str(content.trim())
     } else {
-        // Default to DuckDB for backward compatibility
-        Ok(DatabaseType::DuckDB)
+        // Default to PostgreSQL
+        Ok(DatabaseType::PostgreSQL)
     }
 }
 
@@ -60,10 +60,6 @@ pub fn get_database_path() -> Result<std::path::PathBuf, BucketError> {
         DatabaseType::DuckDB => Ok(buckets_dir.join("buckets.db")),
         DatabaseType::PostgreSQL => Ok(buckets_dir.join("postgres_data")),
     }
-}
-
-pub fn create_duckdb_connection(path: &Path) -> Result<duckdb::Connection, BucketError> {
-    duckdb::Connection::open(path).map_err(BucketError::DuckDB)
 }
 
 #[cfg(feature = "postgres")]
@@ -130,8 +126,8 @@ pub fn initialize_database(location: &Path, db_type: DatabaseType) -> Result<(),
     match db_type {
         DatabaseType::DuckDB => {
             let db_path = location.join("buckets.db");
-            let connection = create_duckdb_connection(&db_path)?;
-            connection.execute_batch(schema)?;
+            let connection = duckdb::Connection::open(&db_path).map_err(BucketError::DuckDB)?;
+            connection.execute_batch(schema).map_err(BucketError::DuckDB)?;
         }
         DatabaseType::PostgreSQL => {
             #[cfg(feature = "postgres")]
